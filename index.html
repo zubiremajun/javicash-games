@@ -1,0 +1,2570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#07111f">
+<meta name="description" content="Snake Arcade Edition - Game #0001">
+<title>Snake Arcade Edition #0001</title>
+
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+--bg:#050b14;--panel:#0b1626;--panel2:#101f33;--border:#1e3a56;
+--text:#eef7ff;--muted:#91a8bb;--green:#39ff88;--green2:#14c968;
+--red:#ff4d67;--yellow:#ffd84d;--cyan:#34d9ff;
+--shadow:0 15px 45px rgba(0,0,0,.38)
+}
+html,body{
+width:100%;min-height:100%;margin:0;
+background:radial-gradient(circle at 50% 0%,#102b44 0%,#07111f 42%,#03070d 100%);
+color:var(--text);font-family:Arial,Helvetica,sans-serif;overflow-x:hidden
+}
+body{display:flex;justify-content:center}
+button{font:inherit;border:0;cursor:pointer;color:inherit}
+.app{width:min(100%,560px);min-height:100vh;padding:12px;position:relative}
+.top-header{
+display:flex;align-items:center;justify-content:space-between;gap:10px;
+padding:12px 14px;border:1px solid var(--border);border-radius:16px;
+background:rgba(10,24,40,.88);box-shadow:var(--shadow)
+}
+.brand{min-width:0}
+.brand-title{margin:0;font-size:20px;font-weight:900;letter-spacing:.3px}
+.developer{margin-top:4px;color:var(--muted);font-size:11px}
+.icon-btn{
+width:42px;height:42px;flex:0 0 42px;border-radius:12px;
+background:var(--panel2);border:1px solid var(--border);font-size:19px;transition:.18s
+}
+.icon-btn:active{transform:scale(.93)}
+.ad-banner{
+width:100%;min-height:50px;margin:10px auto;border-radius:10px;
+border:1px dashed #36536d;background:#081522;display:flex;
+align-items:center;justify-content:center;color:#668095;font-size:11px;overflow:hidden
+}
+.ad-banner-inner{width:320px;max-width:100%;height:50px;display:flex;justify-content:center;align-items:center}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.stat{background:rgba(10,24,40,.88);border:1px solid var(--border);border-radius:13px;padding:9px 6px;text-align:center}
+.stat-label{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:1px}
+.stat-value{margin-top:3px;font-size:20px;font-weight:900}
+#scoreValue{color:var(--green)}
+#coinsValue{color:var(--yellow)}
+#levelValue{color:var(--cyan)}
+.game-shell{
+position:relative;width:100%;border-radius:20px;padding:8px;background:#07111d;
+border:1px solid var(--border);box-shadow:var(--shadow)
+}
+#gameCanvas{
+display:block;width:100%;aspect-ratio:1/1;
+background:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),
+linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px),#07131f;
+background-size:20px 20px;border-radius:14px;touch-action:none
+}
+.game-hint{text-align:center;color:var(--muted);font-size:11px;margin:9px 0 2px}
+.controls{
+width:205px;margin:13px auto 5px;display:grid;
+grid-template-columns:repeat(3,60px);grid-template-rows:repeat(2,60px);
+gap:8px;justify-content:center
+}
+.control-btn{
+border-radius:17px;border:1px solid #284862;
+background:linear-gradient(145deg,#12263c,#0a1727);
+box-shadow:0 7px 18px rgba(0,0,0,.25);font-size:25px;
+user-select:none;touch-action:manipulation
+}
+.control-btn:active{transform:scale(.92);background:#173653}
+.up{grid-column:2;grid-row:1}
+.left{grid-column:1;grid-row:2}
+.down{grid-column:2;grid-row:2}
+.right{grid-column:3;grid-row:2}
+.overlay{
+position:fixed;inset:0;z-index:100;display:flex;align-items:center;
+justify-content:center;padding:18px;background:rgba(0,0,0,.74);
+backdrop-filter:blur(7px);opacity:0;visibility:hidden;
+transition:opacity .25s,visibility .25s
+}
+.overlay.active{opacity:1;visibility:visible}
+.modal{
+width:min(100%,390px);background:linear-gradient(145deg,#0d1d30,#07111e);
+border:1px solid #274863;border-radius:22px;padding:22px;
+box-shadow:0 30px 80px rgba(0,0,0,.55);
+transform:translateY(15px) scale(.96);transition:transform .25s
+}
+.overlay.active .modal{transform:translateY(0) scale(1)}
+.modal h2{margin:0 0 8px;font-size:26px}
+.modal p{margin:6px 0;color:var(--muted);line-height:1.5}
+.game-over-score{font-size:42px;font-weight:900;color:var(--green);text-align:center;margin:18px 0}
+.modal-actions{display:flex;gap:9px;margin-top:18px}
+.primary-btn,.secondary-btn{flex:1;padding:13px 15px;border-radius:13px;font-weight:800;transition:.18s}
+.primary-btn{background:linear-gradient(135deg,var(--green),var(--green2));color:#03110a}
+.secondary-btn{background:#12263b;border:1px solid #284862}
+.primary-btn:active,.secondary-btn:active{transform:scale(.96)}
+.setting-row{margin-top:18px}
+.setting-row label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px}
+input[type=range]{width:100%;accent-color:var(--green)}
+.difficulty-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.difficulty-btn{
+padding:10px 5px;border-radius:10px;background:#0d2034;
+border:1px solid #29445d;color:var(--muted);font-size:12px;font-weight:700
+}
+.difficulty-btn.selected{color:#04120a;background:var(--green);border-color:var(--green)}
+.countdown-modal{text-align:center}
+.countdown-number{
+width:110px;height:110px;border-radius:50%;margin:20px auto;
+display:flex;justify-content:center;align-items:center;font-size:50px;
+font-weight:900;color:var(--green);border:4px solid #21475e;background:#071522
+}
+.ad-label{color:#6f879b;font-size:10px;letter-spacing:1px;text-transform:uppercase}
+.start-overlay{
+position:absolute;inset:8px;border-radius:14px;display:flex;
+align-items:center;justify-content:center;pointer-events:none
+}
+.start-message{
+padding:12px 18px;border-radius:14px;background:rgba(4,14,24,.85);
+border:1px solid #23445c;color:#b9cedd;font-size:12px;text-align:center
+}
+@media(min-width:600px){.app{padding-top:20px}}
+
+/* Added only for the required text-ad reward popup. */
+.reward-ad-copy{
+border:1px solid #294c65;border-radius:14px;padding:15px;
+background:#091725;margin-top:14px
+}
+.reward-ad-copy strong{color:var(--green)}
+.reward-ad-status{text-align:center;margin-top:12px!important;font-size:12px}
+#skipRewardBtn[disabled]{opacity:.45;cursor:not-allowed}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<header class="top-header">
+<div class="brand">
+<h1 class="brand-title">🐍 Snake Arcade Edition</h1>
+<div class="developer">Developed by Zubair Usmani</div>
+</div>
+<button class="icon-btn" id="settingsBtn" aria-label="Settings">⚙️</button>
+</header>
+
+<div class="ad-banner">
+<div class="ad-banner-inner">
+<span>AdMob Banner • 320 × 50 • PLACEHOLDER</span>
+</div>
+</div>
+
+<section class="stats">
+<div class="stat">
+<div class="stat-label">Score</div>
+<div class="stat-value" id="scoreValue">0</div>
+</div>
+<div class="stat">
+<div class="stat-label">Coins</div>
+<div class="stat-value" id="coinsValue">0</div>
+</div>
+<div class="stat">
+<div class="stat-label">Level</div>
+<div class="stat-value" id="levelValue">1</div>
+</div>
+</section>
+
+<main class="game-shell">
+<canvas id="gameCanvas" width="480" height="480"></canvas>
+<div class="start-overlay" id="startOverlay">
+<div class="start-message">
+Use <b>Arrow Keys</b> or touch controls<br>
+to control the snake.
+</div>
+</div>
+</main>
+
+<div class="game-hint">
+Eat 🍎 to grow • Collect 🪙 for bonus coins
+</div>
+
+<div class="controls" aria-label="Snake controls">
+<button class="control-btn up" data-direction="up" aria-label="Up">▲</button>
+<button class="control-btn left" data-direction="left" aria-label="Left">◀</button>
+<button class="control-btn down" data-direction="down" aria-label="Down">▼</button>
+<button class="control-btn right" data-direction="right" aria-label="Right">▶</button>
+</div>
+
+</div>
+
+<div class="overlay" id="gameOverOverlay">
+<div class="modal">
+<div style="text-align:center;">
+<div style="font-size:45px;">💥</div>
+<h2>Game Over</h2>
+<p>Your Snake run has ended.</p>
+</div>
+<div class="game-over-score" id="finalScore">0</div>
+<div style="text-align:center;">
+<p>Best Score: <strong id="bestScoreText">0</strong></p>
+<p>Total Coins: <strong id="totalCoinsText">0</strong></p>
+</div>
+<div class="modal-actions">
+<button class="secondary-btn" id="closeGameOverBtn">Close</button>
+<button class="primary-btn" id="playAgainBtn">▶ Play Again</button>
+</div>
+</div>
+</div>
+
+<div class="overlay" id="settingsOverlay">
+<div class="modal">
+<h2>⚙️ Settings</h2>
+<p>Adjust the Snake Arcade gameplay.</p>
+
+<div class="setting-row">
+<label>
+<span>Starting Speed</span>
+<strong id="speedText">Medium</strong>
+</label>
+<input type="range" id="speedRange" min="1" max="3" step="1" value="2">
+</div>
+
+<div class="setting-row">
+<label>
+<span>Difficulty</span>
+<strong id="difficultyText">Normal</strong>
+</label>
+<div class="difficulty-buttons">
+<button class="difficulty-btn" data-difficulty="easy">Easy</button>
+<button class="difficulty-btn selected" data-difficulty="normal">Normal</button>
+<button class="difficulty-btn" data-difficulty="hard">Hard</button>
+</div>
+</div>
+
+<div class="modal-actions">
+<button class="secondary-btn" id="resetDataBtn">Reset Data</button>
+<button class="primary-btn" id="saveSettingsBtn">Save</button>
+</div>
+</div>
+</div>
+
+<div class="overlay" id="interstitialOverlay">
+<div class="modal countdown-modal">
+<div class="ad-label">Advertisement</div>
+<h2>Get Ready!</h2>
+<p>Your next Snake round will begin shortly.</p>
+<div class="countdown-number" id="countdownNumber">5</div>
+<p>Please wait...</p>
+</div>
+</div>
+
+<!-- Required text advertisement reward popup -->
+<div class="overlay" id="rewardAdOverlay">
+<div class="modal">
+<div class="ad-label">Advertisement</div>
+
+<h2>📢 Text Advertisement</h2>
+
+<div class="reward-ad-copy">
+<strong>Snake Arcade Special</strong>
+<p>
+Keep playing Snake Arcade and enjoy the classic retro experience.
+This is a text-only advertisement.
+</p>
+</div>
+
+<p class="reward-ad-status" id="rewardAdStatus">
+Please view this advertisement before closing it.
+</p>
+
+<div class="modal-actions">
+<button class="secondary-btn" id="skipRewardBtn" disabled>
+Skip Ad
+</button>
+</div>
+</div>
+</div>
+
+<script type="module">
+"use strict";
+
+/* ============================================================
+   FIREBASE
+   ============================================================ */
+
+import {
+    initializeApp
+} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+
+import {
+    getDatabase,
+    ref,
+    update,
+    increment
+} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+
+import {
+    getAuth,
+    onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCwCrQBaYWr6Nr8jdZeeGGyQbjsFW-7LLQ",
+    authDomain: "javicash-13a23.firebaseapp.com",
+    projectId: "javicash-13a23",
+    storageBucket: "javicash-13a23.firebasestorage.app",
+    messagingSenderId: "940101890411",
+    appId: "1:940101890411:web:e4554cbf62319dd8f01c2e",
+    measurementId: "G-G6957LRB21"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getDatabase(firebaseApp);
+const auth = getAuth(firebaseApp);
+
+
+/* ============================================================
+   USER / SECURITY CONFIG
+   ============================================================ */
+
+/*
+   IMPORTANT:
+   ?uid= must be the Firebase Authentication UID of the
+   currently authenticated user.
+
+   A random/member ID must NOT be trusted as authorization.
+*/
+
+const urlParams = new URLSearchParams(location.search);
+
+const requestedUid =
+    (urlParams.get("uid") || "").trim();
+
+const BALANCE_FIELD = "balance";
+
+const PENDING_STORAGE_KEY =
+    "snake_arcade_pending_reward_v1";
+
+
+/* ============================================================
+   DOM
+   ============================================================ */
+
+const canvas =
+    document.getElementById("gameCanvas");
+
+const ctx =
+    canvas.getContext("2d");
+
+const scoreValue =
+    document.getElementById("scoreValue");
+
+const coinsValue =
+    document.getElementById("coinsValue");
+
+const levelValue =
+    document.getElementById("levelValue");
+
+const settingsBtn =
+    document.getElementById("settingsBtn");
+
+const gameOverOverlay =
+    document.getElementById("gameOverOverlay");
+
+const settingsOverlay =
+    document.getElementById("settingsOverlay");
+
+const interstitialOverlay =
+    document.getElementById("interstitialOverlay");
+
+const rewardAdOverlay =
+    document.getElementById("rewardAdOverlay");
+
+const finalScore =
+    document.getElementById("finalScore");
+
+const bestScoreText =
+    document.getElementById("bestScoreText");
+
+const totalCoinsText =
+    document.getElementById("totalCoinsText");
+
+const playAgainBtn =
+    document.getElementById("playAgainBtn");
+
+const closeGameOverBtn =
+    document.getElementById("closeGameOverBtn");
+
+const saveSettingsBtn =
+    document.getElementById("saveSettingsBtn");
+
+const resetDataBtn =
+    document.getElementById("resetDataBtn");
+
+const speedRange =
+    document.getElementById("speedRange");
+
+const speedText =
+    document.getElementById("speedText");
+
+const difficultyText =
+    document.getElementById("difficultyText");
+
+const countdownNumber =
+    document.getElementById("countdownNumber");
+
+const startOverlay =
+    document.getElementById("startOverlay");
+
+const skipRewardBtn =
+    document.getElementById("skipRewardBtn");
+
+const rewardAdStatus =
+    document.getElementById("rewardAdStatus");
+
+
+/* ============================================================
+   SECURE TEMPORARY REWARD STATE
+   ============================================================ */
+
+/*
+   This is intentionally NOT stored in localStorage.
+
+   The only value that can enter this variable is the verified
+   10-coin reward from the online advertisement popup.
+
+   It is never rendered as the authoritative balance.
+*/
+
+let ramRewardCoins = 0;
+
+
+/*
+   This display is intentionally only the current session
+   reward counter. It is not a persistent wallet balance.
+*/
+
+function updateCoinDisplay() {
+    coinsValue.textContent = String(ramRewardCoins);
+}
+
+
+/* ============================================================
+   PENDING LOCAL STORAGE
+   ============================================================ */
+
+function readPendingCoins() {
+
+    try {
+
+        const value =
+            Number(
+                localStorage.getItem(
+                    PENDING_STORAGE_KEY
+                ) || 0
+            );
+
+        if (
+            !Number.isFinite(value) ||
+            value <= 0
+        ) {
+            return 0;
+        }
+
+        return Math.floor(value);
+
+    } catch {
+        return 0;
+    }
+}
+
+
+function writePendingCoins(amount) {
+
+    if (
+        !Number.isFinite(amount) ||
+        amount <= 0
+    ) {
+        return;
+    }
+
+    try {
+
+        const existing =
+            readPendingCoins();
+
+        localStorage.setItem(
+            PENDING_STORAGE_KEY,
+            String(
+                existing +
+                Math.floor(amount)
+            )
+        );
+
+    } catch {
+        /*
+           If storage is unavailable, the RAM amount remains
+           available until the current page lifetime ends.
+        */
+    }
+}
+
+
+function clearPendingCoins() {
+
+    try {
+        localStorage.removeItem(
+            PENDING_STORAGE_KEY
+        );
+    } catch {}
+}
+
+
+/* ============================================================
+   FIREBASE AUTH STATE
+   ============================================================ */
+
+let firebaseAuthUid = null;
+
+onAuthStateChanged(
+    auth,
+    user => {
+
+        firebaseAuthUid =
+            user ? user.uid : null;
+
+        /*
+           If a user becomes authenticated while online,
+           try to sync previously pending rewards.
+        */
+
+        if (
+            firebaseAuthUid &&
+            navigator.onLine
+        ) {
+            syncRewards();
+        }
+    }
+);
+
+
+/* ============================================================
+   FIREBASE ATOMIC SYNC
+   ============================================================ */
+
+let syncInProgress = false;
+
+
+/*
+   The exact RTDB field is:
+
+       /users/{FirebaseAuthUID}/balance
+
+   Change BALANCE_FIELD only if your database uses a different
+   balance field.
+
+   The update uses Firebase's server-side increment operation.
+*/
+
+async function syncRewards() {
+
+    if (syncInProgress) {
+        return false;
+    }
+
+    if (!navigator.onLine) {
+        return false;
+    }
+
+    if (!requestedUid) {
+        return false;
+    }
+
+    /*
+       Security requirement:
+       URL uid must equal authenticated Firebase uid.
+    */
+
+    if (
+        !firebaseAuthUid ||
+        firebaseAuthUid !== requestedUid
+    ) {
+        return false;
+    }
+
+
+    const pending =
+        readPendingCoins();
+
+    const amount =
+        pending + ramRewardCoins;
+
+    if (amount <= 0) {
+        return true;
+    }
+
+    syncInProgress = true;
+
+
+    /*
+       IMPORTANT:
+
+       Do not clear the pending value before Firebase confirms
+       the write.
+
+       This prevents a failed request from silently destroying
+       the reward.
+
+       The server performs the increment atomically.
+    */
+
+    const updates = {};
+
+    updates[
+        `users/${requestedUid}/${BALANCE_FIELD}`
+    ] = increment(amount);
+
+
+    try {
+
+        await update(
+            ref(db),
+            updates
+        );
+
+
+        /*
+           Firebase has confirmed the atomic update.
+           Now clear both local sources.
+        */
+
+        clearPendingCoins();
+
+        ramRewardCoins = 0;
+
+        updateCoinDisplay();
+
+        syncInProgress = false;
+
+        return true;
+
+    } catch (error) {
+
+        /*
+           The amount is converted into a durable pending
+           balance so it can be retried on the next launch.
+
+           If this call was already represented in pending,
+           do not duplicate it.
+        */
+
+        writePendingCoins(
+            ramRewardCoins
+        );
+
+        ramRewardCoins = 0;
+
+        updateCoinDisplay();
+
+        syncInProgress = false;
+
+        console.warn(
+            "Firebase reward sync failed:",
+            error
+        );
+
+        return false;
+    }
+}
+
+
+/* ============================================================
+   INITIAL PENDING SYNC
+   ============================================================ */
+
+function tryInitialPendingSync() {
+
+    if (
+        navigator.onLine &&
+        requestedUid &&
+        firebaseAuthUid === requestedUid
+    ) {
+        syncRewards();
+    }
+}
+
+
+/* ============================================================
+   NETWORK EVENTS
+   ============================================================ */
+
+window.addEventListener(
+    "online",
+    () => {
+
+        /*
+           When connectivity returns, immediately retry pending
+           rewards plus any current RAM rewards.
+        */
+
+        syncRewards();
+    }
+);
+
+
+window.addEventListener(
+    "offline",
+    () => {
+
+        /*
+           No reward is granted while offline.
+
+           Existing RAM rewards are retained temporarily.
+        */
+
+        console.log(
+            "Snake Arcade: offline mode"
+        );
+    }
+);
+
+
+/* ============================================================
+   PAGE VISIBILITY / BACK / EXIT SAFETY
+   ============================================================ */
+
+document.addEventListener(
+    "visibilitychange",
+    () => {
+
+        if (
+            document.visibilityState ===
+            "hidden"
+        ) {
+
+            /*
+               First preserve RAM rewards locally.
+               Then attempt network sync.
+
+               This ordering protects against an app being
+               suspended immediately after this event.
+            */
+
+            if (ramRewardCoins > 0) {
+
+                writePendingCoins(
+                    ramRewardCoins
+                );
+
+                ramRewardCoins = 0;
+
+                updateCoinDisplay();
+            }
+
+            syncRewards();
+        }
+    }
+);
+
+
+/*
+   pagehide is particularly useful for mobile WebViews.
+*/
+
+window.addEventListener(
+    "pagehide",
+    () => {
+
+        if (ramRewardCoins > 0) {
+
+            writePendingCoins(
+                ramRewardCoins
+            );
+
+            ramRewardCoins = 0;
+        }
+
+        /*
+           This is best-effort. The local queue is the
+           crash/close protection mechanism.
+        */
+
+        syncRewards();
+    }
+);
+
+
+/*
+   beforeunload is intentionally only used to persist the
+   pending amount locally. Awaiting Firebase here is unreliable.
+*/
+
+window.addEventListener(
+    "beforeunload",
+    () => {
+
+        if (ramRewardCoins > 0) {
+
+            writePendingCoins(
+                ramRewardCoins
+            );
+
+            ramRewardCoins = 0;
+        }
+    }
+);
+
+
+/* ============================================================
+   CONSTANTS
+   ============================================================ */
+
+const GRID = 24;
+const CELL = canvas.width / GRID;
+
+const STORAGE_KEYS = {
+    BEST: "snake_arcade_best_score",
+    SETTINGS: "snake_arcade_settings"
+};
+
+
+/* ============================================================
+   GAME STATE
+   ============================================================ */
+
+let snake = [];
+let apple = null;
+let coin = null;
+
+let direction = {x:1,y:0};
+let nextDirection = {x:1,y:0};
+
+let score = 0;
+let level = 1;
+
+let gameRunning = false;
+let gameOver = false;
+
+let lastStepTime = 0;
+let animationId = null;
+
+let audioContext = null;
+
+let settings = {
+    speed: 2,
+    difficulty: "normal"
+};
+
+
+/* ============================================================
+   LOCAL GAME DATA
+   ============================================================ */
+
+let bestScore = Number(
+    localStorage.getItem(
+        STORAGE_KEYS.BEST
+    ) || 0
+);
+
+
+/* ============================================================
+   SETTINGS
+   ============================================================ */
+
+function loadSettings() {
+
+    try {
+
+        const saved =
+            localStorage.getItem(
+                STORAGE_KEYS.SETTINGS
+            );
+
+        if (saved) {
+
+            settings = {
+                ...settings,
+                ...JSON.parse(saved)
+            };
+        }
+
+    } catch {}
+}
+
+
+function updateSpeedText() {
+
+    const values = {
+        1: "Slow",
+        2: "Medium",
+        3: "Fast"
+    };
+
+    speedText.textContent =
+        values[speedRange.value] ||
+        "Medium";
+}
+
+
+function updateDifficultyButtons() {
+
+    document
+        .querySelectorAll(".difficulty-btn")
+        .forEach(button => {
+
+            button.classList.toggle(
+                "selected",
+                button.dataset.difficulty ===
+                settings.difficulty
+            );
+        });
+
+    const labels = {
+        easy: "Easy",
+        normal: "Normal",
+        hard: "Hard"
+    };
+
+    difficultyText.textContent =
+        labels[settings.difficulty] ||
+        "Normal";
+}
+
+
+/* ============================================================
+   AUDIO
+   ============================================================ */
+
+function initAudio() {
+
+    if (!audioContext) {
+
+        const AudioCtx =
+            window.AudioContext ||
+            window.webkitAudioContext;
+
+        if (AudioCtx) {
+            audioContext =
+                new AudioCtx();
+        }
+    }
+
+    if (
+        audioContext &&
+        audioContext.state === "suspended"
+    ) {
+        audioContext.resume();
+    }
+}
+
+
+function playTone(
+    frequency,
+    duration=.08,
+    type="square",
+    volume=.035
+) {
+
+    if (!audioContext) return;
+
+    const oscillator =
+        audioContext.createOscillator();
+
+    const gain =
+        audioContext.createGain();
+
+    oscillator.type = type;
+
+    oscillator.frequency.setValueAtTime(
+        frequency,
+        audioContext.currentTime
+    );
+
+    gain.gain.setValueAtTime(
+        volume,
+        audioContext.currentTime
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+        .001,
+        audioContext.currentTime + duration
+    );
+
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+
+    oscillator.start();
+
+    oscillator.stop(
+        audioContext.currentTime + duration
+    );
+}
+
+
+function soundClick() {
+    playTone(480,.05,"square",.025);
+}
+
+
+function soundMove() {
+    playTone(110,.025,"square",.012);
+}
+
+
+function soundEat() {
+
+    playTone(560,.07,"square",.035);
+
+    setTimeout(
+        () => playTone(760,.08,"square",.025),
+        45
+    );
+}
+
+
+function soundCoin() {
+
+    playTone(700,.06,"triangle",.035);
+
+    setTimeout(
+        () => playTone(980,.08,"triangle",.025),
+        55
+    );
+}
+
+
+function soundGameOver() {
+
+    playTone(180,.15,"sawtooth",.045);
+
+    setTimeout(
+        () => playTone(120,.22,"sawtooth",.035),
+        120
+    );
+}
+
+
+/* ============================================================
+   GAME SPEED
+   ============================================================ */
+
+function getStepDelay() {
+
+    const baseSpeeds = {
+        1:180,
+        2:125,
+        3:88
+    };
+
+    let delay =
+        baseSpeeds[
+            Number(settings.speed)
+        ] || 125;
+
+    const multiplier = {
+        easy:1.18,
+        normal:1,
+        hard:.82
+    };
+
+    delay *=
+        multiplier[
+            settings.difficulty
+        ] || 1;
+
+    delay -=
+        (level - 1) * 5;
+
+    return Math.max(48,delay);
+}
+
+
+/* ============================================================
+   LEVEL
+   ============================================================ */
+
+function calculateLevel() {
+
+    level =
+        Math.floor(score / 5) + 1;
+
+    levelValue.textContent =
+        level;
+}
+
+
+/* ============================================================
+   POSITIONS
+   ============================================================ */
+
+function randomGridPosition() {
+
+    return {
+        x:Math.floor(Math.random()*GRID),
+        y:Math.floor(Math.random()*GRID)
+    };
+}
+
+
+function isSnakePosition(position) {
+
+    return snake.some(
+        part =>
+            part.x === position.x &&
+            part.y === position.y
+    );
+}
+
+
+function getFreePosition() {
+
+    let position;
+    let attempts = 0;
+
+    do {
+
+        position =
+            randomGridPosition();
+
+        attempts++;
+
+        if (attempts > 1000) {
+            return {x:0,y:0};
+        }
+
+    } while (
+        isSnakePosition(position)
+    );
+
+    return position;
+}
+
+
+function spawnApple() {
+
+    apple =
+        getFreePosition();
+}
+
+
+/*
+   The coin object remains visually compatible with the original
+   game, but collecting it DOES NOT award Firebase coins.
+
+   This prevents offline gameplay from becoming a reward source.
+*/
+
+function spawnCoin() {
+
+    if (Math.random() < .55) {
+        coin =
+            getFreePosition();
+    } else {
+        coin = null;
+    }
+}
+
+
+/* ============================================================
+   GAME START
+   ============================================================ */
+
+function startGame() {
+
+    initAudio();
+
+    cancelAnimationFrame(
+        animationId
+    );
+
+    snake = [
+        {x:8,y:12},
+        {x:7,y:12},
+        {x:6,y:12},
+        {x:5,y:12}
+    ];
+
+    direction = {
+        x:1,
+        y:0
+    };
+
+    nextDirection = {
+        x:1,
+        y:0
+    };
+
+    score = 0;
+    level = 1;
+
+    gameRunning = true;
+    gameOver = false;
+
+    spawnApple();
+    spawnCoin();
+
+    updateStats();
+
+    startOverlay.style.display =
+        "none";
+
+    hideOverlay(
+        gameOverOverlay
+    );
+
+    hideOverlay(
+        settingsOverlay
+    );
+
+    hideOverlay(
+        interstitialOverlay
+    );
+
+    hideOverlay(
+        rewardAdOverlay
+    );
+
+    lastStepTime =
+        performance.now();
+
+    animationId =
+        requestAnimationFrame(
+            gameLoop
+        );
+}
+
+
+/* ============================================================
+   GAME LOOP
+   ============================================================ */
+
+function gameLoop(timestamp) {
+
+    if (!gameRunning) {
+        return;
+    }
+
+    if (
+        timestamp - lastStepTime >=
+        getStepDelay()
+    ) {
+
+        update();
+
+        lastStepTime =
+            timestamp;
+    }
+
+    draw();
+
+    animationId =
+        requestAnimationFrame(
+            gameLoop
+        );
+}
+
+
+/* ============================================================
+   DIRECTION
+   ============================================================ */
+
+function setDirection(newDirection) {
+
+    initAudio();
+
+    if (
+        newDirection.x === -direction.x &&
+        newDirection.y === -direction.y
+    ) {
+        return;
+    }
+
+    if (
+        newDirection.x === -nextDirection.x &&
+        newDirection.y === -nextDirection.y
+    ) {
+        return;
+    }
+
+    nextDirection =
+        newDirection;
+
+    soundMove();
+}
+
+
+/* ============================================================
+   UPDATE
+   ============================================================ */
+
+function update() {
+
+    direction =
+        nextDirection;
+
+    const head =
+        snake[0];
+
+    const newHead = {
+        x:head.x + direction.x,
+        y:head.y + direction.y
+    };
+
+
+    if (
+        newHead.x < 0 ||
+        newHead.x >= GRID ||
+        newHead.y < 0 ||
+        newHead.y >= GRID
+    ) {
+
+        endGame();
+        return;
+    }
+
+
+    const willEatApple =
+        apple &&
+        newHead.x === apple.x &&
+        newHead.y === apple.y;
+
+    const bodyToCheck =
+        willEatApple
+            ? snake
+            : snake.slice(0,-1);
+
+    const hitSelf =
+        bodyToCheck.some(
+            part =>
+                part.x === newHead.x &&
+                part.y === newHead.y
+        );
+
+    if (hitSelf) {
+
+        endGame();
+        return;
+    }
+
+
+    snake.unshift(
+        newHead
+    );
+
+
+    if (willEatApple) {
+
+        score++;
+
+        soundEat();
+
+        spawnApple();
+
+        if (
+            !coin &&
+            Math.random() < .65
+        ) {
+            spawnCoin();
+        }
+
+    } else {
+
+        snake.pop();
+    }
+
+
+    /*
+       IMPORTANT:
+
+       Collecting the visual coin no longer grants coins.
+
+       This prevents an offline player from earning rewards merely
+       by playing the game.
+
+       The actual 10-coin reward is granted ONLY by the online
+       advertisement skip handler below.
+    */
+
+    if (
+        coin &&
+        newHead.x === coin.x &&
+        newHead.y === coin.y
+    ) {
+
+        soundCoin();
+
+        coin = null;
+
+        if (Math.random() < .35) {
+            spawnCoin();
+        }
+    }
+
+
+    calculateLevel();
+    updateStats();
+}
+
+
+/* ============================================================
+   DRAW
+   ============================================================ */
+
+function draw() {
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    ctx.fillStyle =
+        "#07131f";
+
+    ctx.fillRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    ctx.strokeStyle =
+        "rgba(255,255,255,.025)";
+
+    ctx.lineWidth = 1;
+
+    for (
+        let i=0;
+        i<=GRID;
+        i++
+    ) {
+
+        const p =
+            i * CELL;
+
+        ctx.beginPath();
+        ctx.moveTo(p,0);
+        ctx.lineTo(p,canvas.height);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(0,p);
+        ctx.lineTo(canvas.width,p);
+        ctx.stroke();
+    }
+
+
+    if (apple) {
+        drawApple(apple);
+    }
+
+    if (coin) {
+        drawCoin(coin);
+    }
+
+    snake.forEach(
+        (part,index) =>
+            drawSnakePart(
+                part,
+                index === 0
+            )
+    );
+}
+
+
+/* ============================================================
+   APPLE
+   ============================================================ */
+
+function drawApple(position) {
+
+    const cx =
+        position.x * CELL + CELL / 2;
+
+    const cy =
+        position.y * CELL + CELL / 2;
+
+    const radius =
+        CELL * .34;
+
+    ctx.save();
+
+    ctx.shadowColor =
+        "rgba(255,50,75,.55)";
+
+    ctx.shadowBlur = 13;
+
+    ctx.fillStyle =
+        "#ff435e";
+
+    ctx.beginPath();
+
+    ctx.arc(
+        cx,
+        cy + 2,
+        radius,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+
+    ctx.strokeStyle =
+        "#76e36f";
+
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        cx,
+        cy - radius + 2
+    );
+
+    ctx.quadraticCurveTo(
+        cx + 2,
+        cy - radius - 8,
+        cx + 8,
+        cy - radius - 10
+    );
+
+    ctx.stroke();
+
+    ctx.fillStyle =
+        "#55dc69";
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+        cx + 8,
+        cy - radius - 5,
+        6,
+        3,
+        -.5,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+    ctx.restore();
+}
+
+
+/* ============================================================
+   COIN VISUAL
+   ============================================================ */
+
+function drawCoin(position) {
+
+    const cx =
+        position.x * CELL + CELL / 2;
+
+    const cy =
+        position.y * CELL + CELL / 2;
+
+    const radius =
+        CELL * .27;
+
+    ctx.save();
+
+    ctx.shadowColor =
+        "rgba(255,216,77,.65)";
+
+    ctx.shadowBlur = 14;
+
+    ctx.fillStyle =
+        "#ffd84d";
+
+    ctx.beginPath();
+
+    ctx.arc(
+        cx,
+        cy,
+        radius,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+
+    ctx.strokeStyle =
+        "#fff0a3";
+
+    ctx.lineWidth = 2;
+
+    ctx.stroke();
+
+    ctx.fillStyle =
+        "#8a6200";
+
+    ctx.font =
+        `bold ${CELL * .34}px Arial`;
+
+    ctx.textAlign =
+        "center";
+
+    ctx.textBaseline =
+        "middle";
+
+    ctx.fillText(
+        "$",
+        cx,
+        cy + 1
+    );
+
+    ctx.restore();
+}
+
+
+/* ============================================================
+   SNAKE
+   ============================================================ */
+
+function drawSnakePart(
+    part,
+    isHead
+) {
+
+    const padding = 2;
+
+    const x =
+        part.x * CELL + padding;
+
+    const y =
+        part.y * CELL + padding;
+
+    const size =
+        CELL - padding * 2;
+
+    ctx.save();
+
+    ctx.shadowColor =
+        isHead
+            ? "rgba(57,255,136,.55)"
+            : "rgba(57,255,136,.25)";
+
+    ctx.shadowBlur =
+        isHead ? 12 : 6;
+
+    ctx.fillStyle =
+        isHead
+            ? "#39ff88"
+            : "#18c968";
+
+    roundRect(
+        ctx,
+        x,
+        y,
+        size,
+        size,
+        isHead ? 7 : 5
+    );
+
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+
+    if (isHead) {
+
+        const eyeRadius = 2.3;
+
+        let eye1;
+        let eye2;
+
+        if (direction.x !== 0) {
+
+            const eyeX =
+                direction.x > 0
+                    ? x + size - 7
+                    : x + 7;
+
+            eye1 = {
+                x:eyeX,
+                y:y + 7
+            };
+
+            eye2 = {
+                x:eyeX,
+                y:y + size - 7
+            };
+
+        } else {
+
+            const eyeY =
+                direction.y > 0
+                    ? y + size - 7
+                    : y + 7;
+
+            eye1 = {
+                x:x + 7,
+                y:eyeY
+            };
+
+            eye2 = {
+                x:x + size - 7,
+                y:eyeY
+            };
+        }
+
+        ctx.fillStyle =
+            "#03110a";
+
+        ctx.beginPath();
+
+        ctx.arc(
+            eye1.x,
+            eye1.y,
+            eyeRadius,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+        ctx.beginPath();
+
+        ctx.arc(
+            eye2.x,
+            eye2.y,
+            eyeRadius,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+    }
+
+    ctx.restore();
+}
+
+
+/* ============================================================
+   ROUND RECT
+   ============================================================ */
+
+function roundRect(
+    context,
+    x,
+    y,
+    width,
+    height,
+    radius
+) {
+
+    context.beginPath();
+
+    context.moveTo(
+        x + radius,
+        y
+    );
+
+    context.arcTo(
+        x + width,
+        y,
+        x + width,
+        y + height,
+        radius
+    );
+
+    context.arcTo(
+        x + width,
+        y + height,
+        x,
+        y + height,
+        radius
+    );
+
+    context.arcTo(
+        x,
+        y + height,
+        x,
+        y,
+        radius
+    );
+
+    context.arcTo(
+        x,
+        y,
+        x + width,
+        y,
+        radius
+    );
+
+    context.closePath();
+}
+
+
+/* ============================================================
+   GAME OVER
+   ============================================================ */
+
+function endGame() {
+
+    if (!gameRunning) {
+        return;
+    }
+
+    gameRunning = false;
+    gameOver = true;
+
+    cancelAnimationFrame(
+        animationId
+    );
+
+    soundGameOver();
+
+    if (score > bestScore) {
+
+        bestScore = score;
+
+        localStorage.setItem(
+            STORAGE_KEYS.BEST,
+            String(bestScore)
+        );
+    }
+
+    finalScore.textContent =
+        score;
+
+    bestScoreText.textContent =
+        bestScore;
+
+    totalCoinsText.textContent =
+        ramRewardCoins;
+
+    showOverlay(
+        gameOverOverlay
+    );
+
+
+    /*
+       IMPORTANT REWARD RULE:
+
+       Offline:
+          no advertisement
+          no reward
+
+       Online:
+          show text advertisement
+          user must view it
+          then click Skip Ad
+          exactly +10 RAM coins
+    */
+
+    if (navigator.onLine) {
+
+        /*
+           Game-over screen is shown first.
+           The reward advertisement appears after a short delay.
+        */
+
+        setTimeout(
+            showRewardAdvertisement,
+            350
+        );
+    }
+}
+
+
+/* ============================================================
+   TEXT ADVERTISEMENT
+   ============================================================ */
+
+let rewardAdOpen = false;
+let rewardAlreadyGranted = false;
+let rewardAdTimer = null;
+
+
+function showRewardAdvertisement() {
+
+    if (
+        !navigator.onLine ||
+        !gameOver ||
+        rewardAdOpen ||
+        rewardAlreadyGranted
+    ) {
+        return;
+    }
+
+    rewardAdOpen = true;
+
+    skipRewardBtn.disabled = true;
+
+    rewardAdStatus.textContent =
+        "Please view this advertisement for 3 seconds.";
+
+    showOverlay(
+        rewardAdOverlay
+    );
+
+    let remaining = 3;
+
+    rewardAdTimer =
+        setInterval(
+            () => {
+
+                remaining--;
+
+                if (remaining > 0) {
+
+                    rewardAdStatus.textContent =
+                        `Advertisement viewed for ${remaining} more second${remaining === 1 ? "" : "s"}...`;
+
+                } else {
+
+                    clearInterval(
+                        rewardAdTimer
+                    );
+
+                    rewardAdTimer =
+                        null;
+
+                    skipRewardBtn.disabled =
+                        false;
+
+                    rewardAdStatus.textContent =
+                        "Advertisement viewed. You may now close/skip it.";
+                }
+
+            },
+            1000
+        );
+}
+
+
+/* ============================================================
+   EXACT 10-COIN REWARD
+   ============================================================ */
+
+skipRewardBtn.addEventListener(
+    "click",
+    async () => {
+
+        initAudio();
+        soundClick();
+
+        if (
+            !rewardAdOpen ||
+            rewardAlreadyGranted
+        ) {
+            return;
+        }
+
+        /*
+           Online status is checked again immediately before
+           granting the reward.
+        */
+
+        if (!navigator.onLine) {
+
+            rewardAdStatus.textContent =
+                "Internet connection lost. No reward was granted.";
+
+            return;
+        }
+
+        if (skipRewardBtn.disabled) {
+            return;
+        }
+
+
+        /*
+           Exactly 10 coins.
+           This is the ONLY normal reward creation point.
+        */
+
+        rewardAlreadyGranted = true;
+
+        ramRewardCoins += 10;
+
+        updateCoinDisplay();
+
+        totalCoinsText.textContent =
+            ramRewardCoins;
+
+        rewardAdStatus.textContent =
+            "Reward added: +10 coins.";
+
+
+        /*
+           Try immediate atomic Firebase sync.
+
+           If it fails, the 10 coins remain in RAM until the
+           visibility/pagehide handlers queue them locally.
+        */
+
+        syncRewards();
+
+
+        setTimeout(
+            () => {
+
+                hideOverlay(
+                    rewardAdOverlay
+                );
+
+                rewardAdOpen = false;
+
+            },
+            450
+        );
+    }
+);
+
+
+/* ============================================================
+   STATS
+   ============================================================ */
+
+function updateStats() {
+
+    scoreValue.textContent =
+        score;
+
+    updateCoinDisplay();
+
+    levelValue.textContent =
+        level;
+}
+
+
+/* ============================================================
+   OVERLAY HELPERS
+   ============================================================ */
+
+function showOverlay(element) {
+
+    element.classList.add(
+        "active"
+    );
+}
+
+
+function hideOverlay(element) {
+
+    element.classList.remove(
+        "active"
+    );
+}
+
+
+/* ============================================================
+   INTERSTITIAL
+   ============================================================ */
+
+function startInterstitialCountdown() {
+
+    showOverlay(
+        interstitialOverlay
+    );
+
+    let remaining = 5;
+
+    countdownNumber.textContent =
+        remaining;
+
+    const timer =
+        setInterval(
+            () => {
+
+                remaining--;
+
+                countdownNumber.textContent =
+                    Math.max(
+                        remaining,
+                        0
+                    );
+
+                if (remaining <= 0) {
+
+                    clearInterval(
+                        timer
+                    );
+
+                    hideOverlay(
+                        interstitialOverlay
+                    );
+
+                    /*
+                       Reset reward-ad state for the next round.
+                    */
+
+                    rewardAlreadyGranted =
+                        false;
+
+                    rewardAdOpen =
+                        false;
+
+                    if (rewardAdTimer) {
+
+                        clearInterval(
+                            rewardAdTimer
+                        );
+
+                        rewardAdTimer =
+                            null;
+                    }
+
+                    startGame();
+                }
+
+            },
+            1000
+        );
+}
+
+
+/* ============================================================
+   KEYBOARD
+   ============================================================ */
+
+document.addEventListener(
+    "keydown",
+    event => {
+
+        const key =
+            event.key;
+
+        if (
+            [
+                "ArrowUp",
+                "ArrowDown",
+                "ArrowLeft",
+                "ArrowRight"
+            ].includes(key)
+        ) {
+
+            event.preventDefault();
+        }
+
+        if (key === "ArrowUp") {
+
+            setDirection({
+                x:0,
+                y:-1
+            });
+
+        } else if (key === "ArrowDown") {
+
+            setDirection({
+                x:0,
+                y:1
+            });
+
+        } else if (key === "ArrowLeft") {
+
+            setDirection({
+                x:-1,
+                y:0
+            });
+
+        } else if (key === "ArrowRight") {
+
+            setDirection({
+                x:1,
+                y:0
+            });
+        }
+    }
+);
+
+
+/* ============================================================
+   TOUCH CONTROLS
+   ============================================================ */
+
+document
+.querySelectorAll(".control-btn")
+.forEach(button => {
+
+    button.addEventListener(
+        "pointerdown",
+        event => {
+
+            event.preventDefault();
+
+            const dir =
+                button.dataset.direction;
+
+            if (dir === "up") {
+
+                setDirection({
+                    x:0,
+                    y:-1
+                });
+
+            } else if (dir === "down") {
+
+                setDirection({
+                    x:0,
+                    y:1
+                });
+
+            } else if (dir === "left") {
+
+                setDirection({
+                    x:-1,
+                    y:0
+                });
+
+            } else if (dir === "right") {
+
+                setDirection({
+                    x:1,
+                    y:0
+                });
+            }
+        }
+    );
+});
+
+
+/* ============================================================
+   SWIPE
+   ============================================================ */
+
+let touchStartX = 0;
+let touchStartY = 0;
+
+canvas.addEventListener(
+    "touchstart",
+    event => {
+
+        const touch =
+            event.changedTouches[0];
+
+        touchStartX =
+            touch.clientX;
+
+        touchStartY =
+            touch.clientY;
+    },
+    {passive:true}
+);
+
+
+canvas.addEventListener(
+    "touchend",
+    event => {
+
+        const touch =
+            event.changedTouches[0];
+
+        const dx =
+            touch.clientX -
+            touchStartX;
+
+        const dy =
+            touch.clientY -
+            touchStartY;
+
+        const threshold = 25;
+
+        if (
+            Math.abs(dx) < threshold &&
+            Math.abs(dy) < threshold
+        ) {
+            return;
+        }
+
+        if (
+            Math.abs(dx) >
+            Math.abs(dy)
+        ) {
+
+            setDirection({
+                x:dx > 0 ? 1 : -1,
+                y:0
+            });
+
+        } else {
+
+            setDirection({
+                x:0,
+                y:dy > 0 ? 1 : -1
+            });
+        }
+
+    },
+    {passive:true}
+);
+
+
+/* ============================================================
+   SETTINGS UI
+   ============================================================ */
+
+settingsBtn.addEventListener(
+    "click",
+    () => {
+
+        initAudio();
+        soundClick();
+
+        showOverlay(
+            settingsOverlay
+        );
+    }
+);
+
+
+speedRange.addEventListener(
+    "input",
+    updateSpeedText
+);
+
+
+document
+.querySelectorAll(".difficulty-btn")
+.forEach(button => {
+
+    button.addEventListener(
+        "click",
+        () => {
+
+            initAudio();
+            soundClick();
+
+            settings.difficulty =
+                button.dataset.difficulty;
+
+            updateDifficultyButtons();
+        }
+    );
+});
+
+
+saveSettingsBtn.addEventListener(
+    "click",
+    () => {
+
+        initAudio();
+        soundClick();
+
+        settings.speed =
+            Number(
+                speedRange.value
+            );
+
+        localStorage.setItem(
+            STORAGE_KEYS.SETTINGS,
+            JSON.stringify(settings)
+        );
+
+        hideOverlay(
+            settingsOverlay
+        );
+    }
+);
+
+
+/* ============================================================
+   RESET DATA
+   ============================================================ */
+
+resetDataBtn.addEventListener(
+    "click",
+    () => {
+
+        initAudio();
+        soundClick();
+
+        const confirmed =
+            window.confirm(
+                "Reset high score and settings?"
+            );
+
+        if (!confirmed) {
+            return;
+        }
+
+        localStorage.removeItem(
+            STORAGE_KEYS.BEST
+        );
+
+        localStorage.removeItem(
+            STORAGE_KEYS.SETTINGS
+        );
+
+        bestScore = 0;
+
+        settings = {
+            speed:2,
+            difficulty:"normal"
+        };
+
+        speedRange.value = 2;
+
+        updateSpeedText();
+        updateDifficultyButtons();
+
+        updateStats();
+
+        alert(
+            "Game data has been reset."
+        );
+    }
+);
+
+
+/* ============================================================
+   GAME OVER BUTTONS
+   ============================================================ */
+
+playAgainBtn.addEventListener(
+    "click",
+    () => {
+
+        initAudio();
+        soundClick();
+
+        hideOverlay(
+            gameOverOverlay
+        );
+
+        startInterstitialCountdown();
+    }
+);
+
+
+closeGameOverBtn.addEventListener(
+    "click",
+    () => {
+
+        initAudio();
+        soundClick();
+
+        hideOverlay(
+            gameOverOverlay
+        );
+
+        startOverlay.style.display =
+            "flex";
+    }
+);
+
+
+/* ============================================================
+   SETTINGS BACKDROP
+   ============================================================ */
+
+settingsOverlay.addEventListener(
+    "click",
+    event => {
+
+        if (
+            event.target ===
+            settingsOverlay
+        ) {
+
+            soundClick();
+
+            hideOverlay(
+                settingsOverlay
+            );
+        }
+    }
+);
+
+
+/* ============================================================
+   REWARD POPUP BACKDROP
+   ============================================================ */
+
+rewardAdOverlay.addEventListener(
+    "click",
+    event => {
+
+        /*
+           Do not allow accidental backdrop closing before the
+           reward decision.
+
+           The user must use the Skip Ad button.
+        */
+
+        if (
+            event.target ===
+            rewardAdOverlay &&
+            !skipRewardBtn.disabled
+        ) {
+            /*
+               Deliberately do nothing.
+               Reward requires explicit button click.
+            */
+        }
+    }
+);
+
+
+/* ============================================================
+   INITIALIZATION
+   ============================================================ */
+
+loadSettings();
+
+updateSpeedText();
+updateDifficultyButtons();
+updateStats();
+
+
+snake = [
+    {x:8,y:12},
+    {x:7,y:12},
+    {x:6,y:12},
+    {x:5,y:12}
+];
+
+apple = {
+    x:15,
+    y:12
+};
+
+coin = {
+    x:20,
+    y:8
+};
+
+draw();
+
+
+/*
+   Initialize pending rewards as soon as Firebase authentication
+   becomes available.
+
+   No continuous Firebase listener is created.
+*/
+
+setTimeout(
+    tryInitialPendingSync,
+    0
+);
+
+
+/*
+   First user interaction initializes audio.
+*/
+
+document.addEventListener(
+    "pointerdown",
+    () => {
+        initAudio();
+    },
+    {once:true}
+);
+
+
+/*
+   Start the game automatically.
+*/
+
+setTimeout(
+    () => startGame(),
+    700
+);
+
+</script>
+
+</body>
+</html>
