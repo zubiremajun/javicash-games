@@ -321,7 +321,7 @@ Skip Ad
    the game itself always works.
    ============================================================ */
 
-let ref, update, increment;
+let dbRef, dbUpdate, dbIncrement;
 let db = null;
 let auth = null;
 let firebaseReady = false;
@@ -350,9 +350,9 @@ async function initFirebase() {
             import("https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js")
         ]);
 
-        ref = dbModule.ref;
-        update = dbModule.update;
-        increment = dbModule.increment;
+        dbRef = dbModule.ref;
+        dbUpdate = dbModule.update;
+        dbIncrement = dbModule.increment;
 
         const firebaseApp = appModule.initializeApp(firebaseConfig);
 
@@ -597,9 +597,9 @@ async function syncRewards() {
     if (
         !firebaseReady ||
         !db ||
-        !ref ||
-        !update ||
-        !increment
+        !dbRef ||
+        !dbUpdate ||
+        !dbIncrement
     ) {
         return false;
     }
@@ -636,13 +636,13 @@ async function syncRewards() {
 
     updates[
         `users/${requestedUid}/${BALANCE_FIELD}`
-    ] = increment(amount);
+    ] = dbIncrement(amount);
 
 
     try {
 
-        await update(
-            ref(db),
+        await dbUpdate(
+            dbRef(db),
             updates
         );
 
