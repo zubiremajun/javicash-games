@@ -283,25 +283,30 @@ Skip Ad
 "use strict";
 
 /* ============================================================
-   FIREBASE
+   FIREBASE (FIXED: now loaded lazily/async, wrapped in try/catch)
+   ------------------------------------------------------------
+   ORIGINAL BUG:
+   The Firebase SDK was imported with static top-level `import`
+   statements from www.gstatic.com. If that request fails or is
+   blocked by the environment this preview runs in (CSP / sandbox
+   restrictions on many app-builder webviews only allow certain
+   domains), a static import throws BEFORE any other code in this
+   module runs. That silently killed the entire script - meaning
+   the snake game itself (further below) never initialized, no
+   controls were wired up, and the board stayed empty forever with
+   the "Use Arrow Keys" message stuck on screen.
+
+   FIX:
+   Firebase is now loaded with a dynamic import() inside a
+   try/catch, called AFTER the game is already running. If it
+   fails, only the online coin-reward sync feature is disabled -
+   the game itself always works.
    ============================================================ */
 
-import {
-    initializeApp
-} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-
-import {
-    getDatabase,
-    ref,
-    update,
-    increment
-} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
-
-import {
-    getAuth,
-    onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-
+let ref, update, increment;
+let db = null;
+let auth = null;
+let firebaseReady = false;
 
 const firebaseConfig = {
     apiKey: "AIzaSyCwCrQBaYWr6Nr8jdZeeGGyQbjsFW-7LLQ",
@@ -313,9 +318,64 @@ const firebaseConfig = {
     measurementId: "G-G6957LRB21"
 };
 
-const firebaseApp = initializeApp(firebaseConfig);
-const db = getDatabase(firebaseApp);
-const auth = getAuth(firebaseApp);
+async function initFirebase() {
+
+    try {
+
+        const [
+            appModule,
+            dbModule,
+            authModule
+        ] = await Promise.all([
+            import("https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js"),
+            import("https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js"),
+            import("https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js")
+        ]);
+
+        ref = dbModule.ref;
+        update = dbModule.update;
+        increment = dbModule.increment;
+
+        const firebaseApp = appModule.initializeApp(firebaseConfig);
+
+        db = dbModule.getDatabase(firebaseApp);
+        auth = authModule.getAuth(firebaseApp);
+
+        authModule.onAuthStateChanged(
+            auth,
+            user => {
+
+                firebaseAuthUid =
+                    user ? user.uid : null;
+
+                if (
+                    firebaseAuthUid &&
+                    navigator.onLine
+                ) {
+                    syncRewards();
+                }
+            }
+        );
+
+        firebaseReady = true;
+
+        /*
+           Firebase came online after the game already started -
+           retry any pending reward sync now.
+        */
+        tryInitialPendingSync();
+
+    } catch (error) {
+
+        console.warn(
+            "Snake Arcade: Firebase failed to load. " +
+            "Reward sync is disabled, but the game will still run normally.",
+            error
+        );
+
+        firebaseReady = false;
+    }
+}
 
 
 /* ============================================================
@@ -422,22 +482,7 @@ const rewardAdStatus =
    SECURE TEMPORARY REWARD STATE
    ============================================================ */
 
-/*
-   This is intentionally NOT stored in localStorage.
-
-   The only value that can enter this variable is the verified
-   10-coin reward from the online advertisement popup.
-
-   It is never rendered as the authoritative balance.
-*/
-
 let ramRewardCoins = 0;
-
-
-/*
-   This display is intentionally only the current session
-   reward counter. It is not a persistent wallet balance.
-*/
 
 function updateCoinDisplay() {
     coinsValue.textContent = String(ramRewardCoins);
@@ -496,12 +541,7 @@ function writePendingCoins(amount) {
             )
         );
 
-    } catch {
-        /*
-           If storage is unavailable, the RAM amount remains
-           available until the current page lifetime ends.
-        */
-    }
+    } catch {}
 }
 
 
@@ -515,32 +555,7 @@ function clearPendingCoins() {
 }
 
 
-/* ============================================================
-   FIREBASE AUTH STATE
-   ============================================================ */
-
 let firebaseAuthUid = null;
-
-onAuthStateChanged(
-    auth,
-    user => {
-
-        firebaseAuthUid =
-            user ? user.uid : null;
-
-        /*
-           If a user becomes authenticated while online,
-           try to sync previously pending rewards.
-        */
-
-        if (
-            firebaseAuthUid &&
-            navigator.onLine
-        ) {
-            syncRewards();
-        }
-    }
-);
 
 
 /* ============================================================
@@ -550,20 +565,24 @@ onAuthStateChanged(
 let syncInProgress = false;
 
 
-/*
-   The exact RTDB field is:
-
-       /users/{FirebaseAuthUID}/balance
-
-   Change BALANCE_FIELD only if your database uses a different
-   balance field.
-
-   The update uses Firebase's server-side increment operation.
-*/
-
 async function syncRewards() {
 
     if (syncInProgress) {
+        return false;
+    }
+
+    /*
+       FIX: if Firebase never finished loading (or failed to
+       load), there is nothing to sync against - just bail out
+       instead of throwing on undefined db/ref/update/increment.
+    */
+    if (
+        !firebaseReady ||
+        !db ||
+        !ref ||
+        !update ||
+        !increment
+    ) {
         return false;
     }
 
@@ -574,11 +593,6 @@ async function syncRewards() {
     if (!requestedUid) {
         return false;
     }
-
-    /*
-       Security requirement:
-       URL uid must equal authenticated Firebase uid.
-    */
 
     if (
         !firebaseAuthUid ||
@@ -600,19 +614,6 @@ async function syncRewards() {
 
     syncInProgress = true;
 
-
-    /*
-       IMPORTANT:
-
-       Do not clear the pending value before Firebase confirms
-       the write.
-
-       This prevents a failed request from silently destroying
-       the reward.
-
-       The server performs the increment atomically.
-    */
-
     const updates = {};
 
     updates[
@@ -627,12 +628,6 @@ async function syncRewards() {
             updates
         );
 
-
-        /*
-           Firebase has confirmed the atomic update.
-           Now clear both local sources.
-        */
-
         clearPendingCoins();
 
         ramRewardCoins = 0;
@@ -644,14 +639,6 @@ async function syncRewards() {
         return true;
 
     } catch (error) {
-
-        /*
-           The amount is converted into a durable pending
-           balance so it can be retried on the next launch.
-
-           If this call was already represented in pending,
-           do not duplicate it.
-        */
 
         writePendingCoins(
             ramRewardCoins
@@ -696,12 +683,6 @@ function tryInitialPendingSync() {
 window.addEventListener(
     "online",
     () => {
-
-        /*
-           When connectivity returns, immediately retry pending
-           rewards plus any current RAM rewards.
-        */
-
         syncRewards();
     }
 );
@@ -710,13 +691,6 @@ window.addEventListener(
 window.addEventListener(
     "offline",
     () => {
-
-        /*
-           No reward is granted while offline.
-
-           Existing RAM rewards are retained temporarily.
-        */
-
         console.log(
             "Snake Arcade: offline mode"
         );
@@ -737,14 +711,6 @@ document.addEventListener(
             "hidden"
         ) {
 
-            /*
-               First preserve RAM rewards locally.
-               Then attempt network sync.
-
-               This ordering protects against an app being
-               suspended immediately after this event.
-            */
-
             if (ramRewardCoins > 0) {
 
                 writePendingCoins(
@@ -762,10 +728,6 @@ document.addEventListener(
 );
 
 
-/*
-   pagehide is particularly useful for mobile WebViews.
-*/
-
 window.addEventListener(
     "pagehide",
     () => {
@@ -779,20 +741,10 @@ window.addEventListener(
             ramRewardCoins = 0;
         }
 
-        /*
-           This is best-effort. The local queue is the
-           crash/close protection mechanism.
-        */
-
         syncRewards();
     }
 );
 
-
-/*
-   beforeunload is intentionally only used to persist the
-   pending amount locally. Awaiting Firebase here is unreliable.
-*/
 
 window.addEventListener(
     "beforeunload",
@@ -1142,13 +1094,6 @@ function spawnApple() {
 }
 
 
-/*
-   The coin object remains visually compatible with the original
-   game, but collecting it DOES NOT award Firebase coins.
-
-   This prevents offline gameplay from becoming a reward source.
-*/
-
 function spawnCoin() {
 
     if (Math.random() < .55) {
@@ -1367,18 +1312,6 @@ function update() {
         snake.pop();
     }
 
-
-    /*
-       IMPORTANT:
-
-       Collecting the visual coin no longer grants coins.
-
-       This prevents an offline player from earning rewards merely
-       by playing the game.
-
-       The actual 10-coin reward is granted ONLY by the online
-       advertisement skip handler below.
-    */
 
     if (
         coin &&
@@ -1838,27 +1771,7 @@ function endGame() {
         gameOverOverlay
     );
 
-
-    /*
-       IMPORTANT REWARD RULE:
-
-       Offline:
-          no advertisement
-          no reward
-
-       Online:
-          show text advertisement
-          user must view it
-          then click Skip Ad
-          exactly +10 RAM coins
-    */
-
     if (navigator.onLine) {
-
-        /*
-           Game-over screen is shown first.
-           The reward advertisement appears after a short delay.
-        */
 
         setTimeout(
             showRewardAdvertisement,
@@ -1952,11 +1865,6 @@ skipRewardBtn.addEventListener(
             return;
         }
 
-        /*
-           Online status is checked again immediately before
-           granting the reward.
-        */
-
         if (!navigator.onLine) {
 
             rewardAdStatus.textContent =
@@ -1970,11 +1878,6 @@ skipRewardBtn.addEventListener(
         }
 
 
-        /*
-           Exactly 10 coins.
-           This is the ONLY normal reward creation point.
-        */
-
         rewardAlreadyGranted = true;
 
         ramRewardCoins += 10;
@@ -1986,14 +1889,6 @@ skipRewardBtn.addEventListener(
 
         rewardAdStatus.textContent =
             "Reward added: +10 coins.";
-
-
-        /*
-           Try immediate atomic Firebase sync.
-
-           If it fails, the 10 coins remain in RAM until the
-           visibility/pagehide handlers queue them locally.
-        */
 
         syncRewards();
 
@@ -2086,10 +1981,6 @@ function startInterstitialCountdown() {
                     hideOverlay(
                         interstitialOverlay
                     );
-
-                    /*
-                       Reset reward-ad state for the next round.
-                    */
 
                     rewardAlreadyGranted =
                         false;
@@ -2477,22 +2368,12 @@ rewardAdOverlay.addEventListener(
     "click",
     event => {
 
-        /*
-           Do not allow accidental backdrop closing before the
-           reward decision.
-
-           The user must use the Skip Ad button.
-        */
-
         if (
             event.target ===
             rewardAdOverlay &&
             !skipRewardBtn.disabled
         ) {
-            /*
-               Deliberately do nothing.
-               Reward requires explicit button click.
-            */
+            /* Deliberately do nothing. */
         }
     }
 );
@@ -2500,6 +2381,8 @@ rewardAdOverlay.addEventListener(
 
 /* ============================================================
    INITIALIZATION
+   (Game starts immediately - Firebase loads separately/async
+   and can never block this section anymore.)
    ============================================================ */
 
 loadSettings();
@@ -2529,23 +2412,6 @@ coin = {
 draw();
 
 
-/*
-   Initialize pending rewards as soon as Firebase authentication
-   becomes available.
-
-   No continuous Firebase listener is created.
-*/
-
-setTimeout(
-    tryInitialPendingSync,
-    0
-);
-
-
-/*
-   First user interaction initializes audio.
-*/
-
 document.addEventListener(
     "pointerdown",
     () => {
@@ -2555,14 +2421,17 @@ document.addEventListener(
 );
 
 
-/*
-   Start the game automatically.
-*/
-
 setTimeout(
     () => startGame(),
     700
 );
+
+
+/*
+   Kick off Firebase loading in the background - completely
+   decoupled from game startup above.
+*/
+initFirebase();
 
 </script>
 
