@@ -279,6 +279,24 @@ Skip Ad
 </div>
 </div>
 
+<div id="debugErrorBox" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#3a0d0d;color:#ffdada;font:12px monospace;padding:10px;max-height:45vh;overflow:auto;border-bottom:3px solid #ff4d67;white-space:pre-wrap;"></div>
+
+<script>
+(function(){
+    var box = document.getElementById("debugErrorBox");
+    function show(msg){
+        box.style.display = "block";
+        box.textContent += msg + "\n\n";
+    }
+    window.addEventListener("error", function(e){
+        show("JS ERROR: " + e.message + "\nFile: " + e.filename + "\nLine: " + e.lineno + ":" + e.colno);
+    });
+    window.addEventListener("unhandledrejection", function(e){
+        show("PROMISE ERROR: " + (e.reason && e.reason.message ? e.reason.message : e.reason));
+    });
+})();
+</script>
+
 <script type="module">
 "use strict";
 
