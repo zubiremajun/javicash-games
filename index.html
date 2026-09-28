@@ -66,12 +66,18 @@ grid-template-columns:repeat(3,60px);grid-template-rows:repeat(2,60px);
 gap:8px;justify-content:center
 }
 .control-btn{
-border-radius:17px;border:1px solid #284862;
-background:linear-gradient(145deg,#12263c,#0a1727);
-box-shadow:0 7px 18px rgba(0,0,0,.25);font-size:25px;
-user-select:none;touch-action:manipulation
+border-radius:18px;border:1px solid #5dffa5;
+background:linear-gradient(145deg,#2a8f5a,#14663d 55%,#0d4a2c);
+color:#f0fff6;font-size:26px;text-shadow:0 0 10px rgba(57,255,136,.95);
+box-shadow:0 0 16px rgba(57,255,136,.45),0 8px 18px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.30);
+user-select:none;touch-action:manipulation;
+transition:transform .12s,box-shadow .12s,background .12s,color .12s
 }
-.control-btn:active{transform:scale(.92);background:#173653}
+.control-btn:active{
+transform:scale(.92);
+background:linear-gradient(145deg,#39ff88,#14c968);color:#03110a;text-shadow:none;
+box-shadow:0 0 28px rgba(57,255,136,.9),inset 0 2px 6px rgba(0,0,0,.25)
+}
 .up{grid-column:2;grid-row:1}
 .left{grid-column:1;grid-row:2}
 .down{grid-column:2;grid-row:2}
@@ -132,6 +138,31 @@ background:#091725;margin-top:14px
 .reward-ad-copy strong{color:var(--green)}
 .reward-ad-status{text-align:center;margin-top:12px!important;font-size:12px}
 #skipRewardBtn[disabled]{opacity:.45;cursor:not-allowed}
+
+/* Settings: keep the box inside the screen and scrollable */
+#settingsOverlay .modal{max-height:calc(100vh - 36px);overflow-y:auto}
+
+/* Wall mode buttons (same look as difficulty buttons) */
+.wall-buttons{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+.wall-btn{
+padding:10px 5px;border-radius:10px;background:#0d2034;
+border:1px solid #29445d;color:var(--muted);font-size:12px;font-weight:700
+}
+.wall-btn.selected{color:#04120a;background:var(--green);border-color:var(--green)}
+.modal .wall-hint{font-size:11px;margin:8px 0 0}
+
+/* Developer ad: small, slides in from the top, never blocks touch */
+.dev-ad{
+position:fixed;top:0;left:50%;transform:translate(-50%,-130%);z-index:90;
+width:min(94%,520px);display:flex;align-items:center;justify-content:center;gap:8px;
+padding:7px 12px;padding-top:calc(7px + env(safe-area-inset-top,0px));
+border-radius:0 0 14px 14px;color:#fff;font-size:12px;font-weight:700;
+background:linear-gradient(90deg,rgba(255,120,130,.94),rgba(28,58,150,.95));
+box-shadow:0 8px 22px rgba(0,0,0,.4);pointer-events:none;
+transition:transform .45s ease
+}
+.dev-ad.show{transform:translate(-50%,0)}
+.dev-ad-icon{font-size:18px}
 </style>
 </head>
 
@@ -191,6 +222,11 @@ Eat 🍎 to grow • Collect 🪙 for bonus coins
 
 </div>
 
+<div class="dev-ad" id="devAd" aria-hidden="true">
+<span class="dev-ad-icon">🧑‍💻</span>
+<span>Developer Ad • <b>Zubirosmani 549</b></span>
+</div>
+
 <div class="overlay" id="gameOverOverlay">
 <div class="modal">
 <div style="text-align:center;">
@@ -233,6 +269,18 @@ Eat 🍎 to grow • Collect 🪙 for bonus coins
 <button class="difficulty-btn selected" data-difficulty="normal">Normal</button>
 <button class="difficulty-btn" data-difficulty="hard">Hard</button>
 </div>
+</div>
+
+<div class="setting-row">
+<label>
+<span>Wall Mode</span>
+<strong id="wallText">Walls Kill</strong>
+</label>
+<div class="wall-buttons">
+<button class="wall-btn selected" data-wall="solid">Walls Kill</button>
+<button class="wall-btn" data-wall="wrap">Pass Through</button>
+</div>
+<p class="wall-hint" id="wallHint">The snake dies when it hits a wall or itself.</p>
 </div>
 
 <div class="modal-actions">
@@ -284,10 +332,13 @@ Skip Ad
 <script>
 (function(){
     var box = document.getElementById("debugErrorBox");
+    window.SNAKE_DEBUG = true; /* set to false before the public release */
     function show(msg){
+        if(!window.SNAKE_DEBUG) return;
         box.style.display = "block";
         box.textContent += msg + "\n\n";
     }
+    window.__showDebug = show;
     window.addEventListener("error", function(e){
         show("JS ERROR: " + e.message + "\nFile: " + e.filename + "\nLine: " + e.lineno + ":" + e.colno);
     });
@@ -301,30 +352,15 @@ Skip Ad
 "use strict";
 
 /* ============================================================
-   FIREBASE (FIXED: now loaded lazily/async, wrapped in try/catch)
+   FIREBASE - USED ONLY WHEN COINS ARE SAVED
    ------------------------------------------------------------
-   ORIGINAL BUG:
-   The Firebase SDK was imported with static top-level `import`
-   statements from www.gstatic.com. If that request fails or is
-   blocked by the environment this preview runs in (CSP / sandbox
-   restrictions on many app-builder webviews only allow certain
-   domains), a static import throws BEFORE any other code in this
-   module runs. That silently killed the entire script - meaning
-   the snake game itself (further below) never initialized, no
-   controls were wired up, and the board stayed empty forever with
-   the "Use Arrow Keys" message stuck on screen.
-
-   FIX:
-   Firebase is now loaded with a dynamic import() inside a
-   try/catch, called AFTER the game is already running. If it
-   fails, only the online coin-reward sync feature is disabled -
-   the game itself always works.
+   While the player is playing there is NO Firebase database
+   connection. The SDK files are only downloaded quietly in the
+   background (so saving is fast). The database itself is opened
+   at the moment the player leaves the game (Back button).
+   Static imports are not used on purpose: a blocked CDN used to
+   stop the whole game from starting.
    ============================================================ */
-
-let dbRef, dbUpdate, dbIncrement;
-let db = null;
-let auth = null;
-let firebaseReady = false;
 
 const firebaseConfig = {
     apiKey: "AIzaSyCwCrQBaYWr6Nr8jdZeeGGyQbjsFW-7LLQ",
@@ -333,66 +369,27 @@ const firebaseConfig = {
     storageBucket: "javicash-13a23.firebasestorage.app",
     messagingSenderId: "940101890411",
     appId: "1:940101890411:web:e4554cbf62319dd8f01c2e",
-    measurementId: "G-G6957LRB21"
+    databaseURL: "https://javicash-13a23-default-rtdb.firebaseio.com"
 };
 
-async function initFirebase() {
+const FIREBASE_VERSION = "10.8.0";
 
-    try {
+let firebaseModulesPromise = null;
 
-        const [
-            appModule,
-            dbModule,
-            authModule
-        ] = await Promise.all([
-            import("https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js"),
-            import("https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js"),
-            import("https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js")
-        ]);
+function loadFirebaseModules() {
 
-        dbRef = dbModule.ref;
-        dbUpdate = dbModule.update;
-        dbIncrement = dbModule.increment;
+    if (!firebaseModulesPromise) {
 
-        const firebaseApp = appModule.initializeApp(firebaseConfig);
-
-        db = dbModule.getDatabase(firebaseApp);
-        auth = authModule.getAuth(firebaseApp);
-
-        authModule.onAuthStateChanged(
-            auth,
-            user => {
-
-                firebaseAuthUid =
-                    user ? user.uid : null;
-
-                if (
-                    firebaseAuthUid &&
-                    navigator.onLine
-                ) {
-                    syncRewards();
-                }
-            }
-        );
-
-        firebaseReady = true;
-
-        /*
-           Firebase came online after the game already started -
-           retry any pending reward sync now.
-        */
-        tryInitialPendingSync();
-
-    } catch (error) {
-
-        console.warn(
-            "Snake Arcade: Firebase failed to load. " +
-            "Reward sync is disabled, but the game will still run normally.",
-            error
-        );
-
-        firebaseReady = false;
+        firebaseModulesPromise = Promise.all([
+            import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`),
+            import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-database.js`)
+        ]).catch(error => {
+            firebaseModulesPromise = null;
+            throw error;
+        });
     }
+
+    return firebaseModulesPromise;
 }
 
 
@@ -497,19 +494,27 @@ const rewardAdStatus =
 
 
 /* ============================================================
-   SECURE TEMPORARY REWARD STATE
+   COIN WALLET (RAM) + SAVE TO FIREBASE WHEN THE PLAYER LEAVES
+   ------------------------------------------------------------
+   1. The +10 ad reward is added to RAM only.
+   2. When the player presses Back in JAVICASH, the dashboard asks
+      this game to save. The game then opens Firebase, checks the
+      member (unique ID + email from the JAVICASH login), adds ALL
+      collected coins to  users/{uid}/balance  in ONE atomic step,
+      and sets the local coin counter back to zero.
    ============================================================ */
 
-let ramRewardCoins = 0;
+const MAX_COINS_PER_FLUSH = 300;   /* safety cap for one save */
+const FLUSH_TIMEOUT_MS = 7000;
+
+let ramRewardCoins = 0;   /* coins earned in this visit (RAM) */
+let carryCoins = 0;       /* coins of an earlier visit that could not be saved */
+
 
 function updateCoinDisplay() {
     coinsValue.textContent = String(ramRewardCoins);
 }
 
-
-/* ============================================================
-   PENDING LOCAL STORAGE
-   ============================================================ */
 
 function readPendingCoins() {
 
@@ -517,15 +522,10 @@ function readPendingCoins() {
 
         const value =
             Number(
-                localStorage.getItem(
-                    PENDING_STORAGE_KEY
-                ) || 0
+                localStorage.getItem(PENDING_STORAGE_KEY) || 0
             );
 
-        if (
-            !Number.isFinite(value) ||
-            value <= 0
-        ) {
+        if (!Number.isFinite(value) || value <= 0) {
             return 0;
         }
 
@@ -537,210 +537,304 @@ function readPendingCoins() {
 }
 
 
-function writePendingCoins(amount) {
-
-    if (
-        !Number.isFinite(amount) ||
-        amount <= 0
-    ) {
-        return;
-    }
+function savePendingCoins(total) {
 
     try {
 
-        const existing =
-            readPendingCoins();
-
-        localStorage.setItem(
-            PENDING_STORAGE_KEY,
-            String(
-                existing +
-                Math.floor(amount)
-            )
-        );
+        if (total > 0) {
+            localStorage.setItem(
+                PENDING_STORAGE_KEY,
+                String(Math.floor(total))
+            );
+        } else {
+            localStorage.removeItem(PENDING_STORAGE_KEY);
+        }
 
     } catch {}
 }
 
 
-function clearPendingCoins() {
+carryCoins = readPendingCoins();
 
-    try {
-        localStorage.removeItem(
-            PENDING_STORAGE_KEY
-        );
-    } catch {}
+
+function totalUncredited() {
+    return carryCoins + ramRewardCoins;
 }
 
 
-let firebaseAuthUid = null;
+/* Safety copy (no network): survives a phone that kills the app. */
+
+function persistUncredited() {
+    savePendingCoins(totalUncredited());
+}
 
 
-/* ============================================================
-   FIREBASE ATOMIC SYNC
-   ============================================================ */
+/* ---------- who is playing? ---------- */
 
-let syncInProgress = false;
+/*
+   The game runs on the same website as the JAVICASH dashboard, so
+   it can read the member login the dashboard already saved
+   ("javicash_session": uid + email).
+*/
+
+function getMember() {
+
+    try {
+
+        const raw = localStorage.getItem("javicash_session");
+
+        if (!raw) return null;
+
+        const info = JSON.parse(raw);
+
+        const uid = String((info && info.uid) || "").trim();
+
+        if (!uid || /[.#$\[\]\/]/.test(uid)) return null;
+
+        if (requestedUid && requestedUid !== uid) return null;
+
+        return {
+            uid: uid,
+            email: String((info && info.email) || "").trim().toLowerCase()
+        };
+
+    } catch {
+        return null;
+    }
+}
 
 
-async function syncRewards() {
+function withTimeout(promise, ms) {
 
-    if (syncInProgress) {
-        return false;
+    return new Promise((resolve, reject) => {
+
+        const timer = setTimeout(
+            () => reject(new Error("timeout")),
+            ms
+        );
+
+        promise.then(
+            value => { clearTimeout(timer); resolve(value); },
+            error => { clearTimeout(timer); reject(error); }
+        );
+    });
+}
+
+
+function debugSync(message, error) {
+
+    console.warn("Snake coin save:", message, error || "");
+
+    if (window.SNAKE_DEBUG && window.__showDebug) {
+
+        window.__showDebug(
+            "COIN SAVE: " + message +
+            (error ? " - " + (error.message || error) : "")
+        );
+    }
+}
+
+
+/* ---------- the only place that talks to Firebase ---------- */
+
+async function saveCoinsToFirebase(member, amount) {
+
+    const [appModule, dbModule] = await loadFirebaseModules();
+
+    const app =
+        appModule.getApps().length
+            ? appModule.getApp()
+            : appModule.initializeApp(firebaseConfig);
+
+    const database = dbModule.getDatabase(app);
+
+    try {
+
+        dbModule.goOnline(database);
+
+        /* 1) the unique ID must exist in JAVICASH */
+
+        const snapshot =
+            await dbModule.get(
+                dbModule.ref(database, "users/" + member.uid)
+            );
+
+        if (!snapshot.exists()) {
+            throw new Error("member-not-found");
+        }
+
+        /* 2) the email must match, if both sides have one */
+
+        const data = snapshot.val() || {};
+
+        const savedEmail =
+            String(data.email || "").trim().toLowerCase();
+
+        if (
+            member.email &&
+            savedEmail &&
+            member.email !== savedEmail
+        ) {
+            throw new Error("member-email-mismatch");
+        }
+
+        /* 3) add the coins (atomic, server side) */
+
+        await dbModule.update(
+            dbModule.ref(database),
+            {
+                ["users/" + member.uid + "/balance"]:
+                    dbModule.increment(amount)
+            }
+        );
+
+    } finally {
+
+        /* close the connection again */
+
+        try { dbModule.goOffline(database); } catch {}
+    }
+}
+
+
+let flushPromise = null;
+
+
+function flushRewards() {
+
+    if (flushPromise) {
+        return flushPromise;
     }
 
-    /*
-       FIX: if Firebase never finished loading (or failed to
-       load), there is nothing to sync against - just bail out
-       instead of throwing on undefined db/ref/update/increment.
-    */
-    if (
-        !firebaseReady ||
-        !db ||
-        !dbRef ||
-        !dbUpdate ||
-        !dbIncrement
-    ) {
-        return false;
+    flushPromise = doFlush().finally(() => {
+        flushPromise = null;
+    });
+
+    return flushPromise;
+}
+
+
+async function doFlush() {
+
+    const total = totalUncredited();
+
+    if (total <= 0) {
+        return { ok: true, credited: 0 };
     }
+
+    persistUncredited();
 
     if (!navigator.onLine) {
-        return false;
+        debugSync("offline - coins are kept for the next time");
+        return { ok: false, credited: 0, reason: "offline" };
     }
 
-    if (!requestedUid) {
-        return false;
+    const member = getMember();
+
+    if (!member) {
+        debugSync("member login not found on this device");
+        return { ok: false, credited: 0, reason: "no-member" };
     }
 
-    if (
-        !firebaseAuthUid ||
-        firebaseAuthUid !== requestedUid
-    ) {
-        return false;
-    }
-
-
-    const pending =
-        readPendingCoins();
-
-    const amount =
-        pending + ramRewardCoins;
-
-    if (amount <= 0) {
-        return true;
-    }
-
-    syncInProgress = true;
-
-    const updates = {};
-
-    updates[
-        `users/${requestedUid}/${BALANCE_FIELD}`
-    ] = dbIncrement(amount);
-
+    const credit = Math.min(total, MAX_COINS_PER_FLUSH);
 
     try {
 
-        await dbUpdate(
-            dbRef(db),
-            updates
+        await withTimeout(
+            saveCoinsToFirebase(member, credit),
+            FLUSH_TIMEOUT_MS
         );
-
-        clearPendingCoins();
-
-        ramRewardCoins = 0;
-
-        updateCoinDisplay();
-
-        syncInProgress = false;
-
-        return true;
 
     } catch (error) {
 
-        writePendingCoins(
-            ramRewardCoins
-        );
+        debugSync("could not save coins", error);
 
-        ramRewardCoins = 0;
-
-        updateCoinDisplay();
-
-        syncInProgress = false;
-
-        console.warn(
-            "Firebase reward sync failed:",
-            error
-        );
-
-        return false;
+        return { ok: false, credited: 0, reason: "failed" };
     }
+
+    /* Saved. Local memory goes back to zero. */
+
+    const leftover = total - credit;
+
+    ramRewardCoins = 0;
+    carryCoins = leftover;
+
+    savePendingCoins(leftover);
+
+    updateCoinDisplay();
+
+    totalCoinsText.textContent = ramRewardCoins;
+
+    return { ok: true, credited: credit };
 }
 
 
-/* ============================================================
-   INITIAL PENDING SYNC
-   ============================================================ */
+/* ---------- ad limit: 2 ads, then 2 minutes without ads ---------- */
 
-function tryInitialPendingSync() {
+const AD_STATE_KEY = "snake_arcade_ad_state_v1";
+const ADS_BEFORE_COOLDOWN = 2;
+const AD_COOLDOWN_MS = 2 * 60 * 1000;
 
-    if (
-        navigator.onLine &&
-        requestedUid &&
-        firebaseAuthUid === requestedUid
-    ) {
-        syncRewards();
-    }
+
+function readAdState() {
+
+    let count = 0;
+    let until = 0;
+
+    try {
+
+        const saved =
+            JSON.parse(localStorage.getItem(AD_STATE_KEY) || "{}");
+
+        count = Math.max(0, Math.floor(Number(saved.count) || 0));
+        until = Math.max(0, Number(saved.until) || 0);
+
+    } catch {}
+
+    /* a wrong phone clock can never lock ads for more than 2 minutes */
+
+    until = Math.min(until, Date.now() + AD_COOLDOWN_MS);
+
+    return { count: count, until: until };
 }
 
 
-/* ============================================================
-   NETWORK EVENTS
-   ============================================================ */
+function writeAdState(state) {
 
-window.addEventListener(
-    "online",
-    () => {
-        syncRewards();
+    try {
+        localStorage.setItem(AD_STATE_KEY, JSON.stringify(state));
+    } catch {}
+}
+
+
+function adAllowed() {
+    return Date.now() >= readAdState().until;
+}
+
+
+function registerAdCompleted() {
+
+    const state = readAdState();
+
+    state.count += 1;
+
+    if (state.count >= ADS_BEFORE_COOLDOWN) {
+        state.count = 0;
+        state.until = Date.now() + AD_COOLDOWN_MS;
     }
-);
+
+    writeAdState(state);
+}
 
 
-window.addEventListener(
-    "offline",
-    () => {
-        console.log(
-            "Snake Arcade: offline mode"
-        );
-    }
-);
-
-
-/* ============================================================
-   PAGE VISIBILITY / BACK / EXIT SAFETY
-   ============================================================ */
+/* ---------- leaving the page / dashboard Back button ---------- */
 
 document.addEventListener(
     "visibilitychange",
     () => {
 
-        if (
-            document.visibilityState ===
-            "hidden"
-        ) {
-
-            if (ramRewardCoins > 0) {
-
-                writePendingCoins(
-                    ramRewardCoins
-                );
-
-                ramRewardCoins = 0;
-
-                updateCoinDisplay();
-            }
-
-            syncRewards();
+        if (document.visibilityState === "hidden") {
+            persistUncredited();
         }
     }
 );
@@ -750,16 +844,9 @@ window.addEventListener(
     "pagehide",
     () => {
 
-        if (ramRewardCoins > 0) {
+        persistUncredited();
 
-            writePendingCoins(
-                ramRewardCoins
-            );
-
-            ramRewardCoins = 0;
-        }
-
-        syncRewards();
+        flushRewards();
     }
 );
 
@@ -767,15 +854,48 @@ window.addEventListener(
 window.addEventListener(
     "beforeunload",
     () => {
+        persistUncredited();
+    }
+);
 
-        if (ramRewardCoins > 0) {
 
-            writePendingCoins(
-                ramRewardCoins
+/* The JAVICASH dashboard asks: "please save the coins now". */
+
+window.addEventListener(
+    "message",
+    async event => {
+
+        if (
+            window.parent === window ||
+            event.source !== window.parent
+        ) {
+            return;
+        }
+
+        const data = event.data;
+
+        if (!data || data.type !== "JAVICASH_FLUSH_REQUEST") {
+            return;
+        }
+
+        let result = { ok: false, credited: 0 };
+
+        try {
+            result = await flushRewards();
+        } catch {}
+
+        try {
+
+            event.source.postMessage(
+                {
+                    type: "JAVICASH_FLUSH_DONE",
+                    ok: result.ok,
+                    credited: result.credited || 0
+                },
+                "*"
             );
 
-            ramRewardCoins = 0;
-        }
+        } catch {}
     }
 );
 
@@ -809,6 +929,7 @@ let level = 1;
 
 let gameRunning = false;
 let gameOver = false;
+let paused = false;
 
 let lastStepTime = 0;
 let animationId = null;
@@ -817,7 +938,8 @@ let audioContext = null;
 
 let settings = {
     speed: 2,
-    difficulty: "normal"
+    difficulty: "normal",
+    wallMode: "solid"
 };
 
 
@@ -851,6 +973,10 @@ function loadSettings() {
                 ...settings,
                 ...JSON.parse(saved)
             };
+
+            if (settings.wallMode !== "wrap") {
+                settings.wallMode = "solid";
+            }
         }
 
     } catch {}
@@ -893,6 +1019,41 @@ function updateDifficultyButtons() {
     difficultyText.textContent =
         labels[settings.difficulty] ||
         "Normal";
+}
+
+
+/* ============================================================
+   WALL MODE (Settings)
+   ============================================================ */
+
+const wallText =
+    document.getElementById("wallText");
+
+const wallHint =
+    document.getElementById("wallHint");
+
+
+function updateWallButtons() {
+
+    const wrap = settings.wallMode === "wrap";
+
+    document
+        .querySelectorAll(".wall-btn")
+        .forEach(button => {
+
+            button.classList.toggle(
+                "selected",
+                button.dataset.wall === settings.wallMode
+            );
+        });
+
+    wallText.textContent =
+        wrap ? "Pass Through" : "Walls Kill";
+
+    wallHint.textContent =
+        wrap
+            ? "The snake goes through the wall and comes out on the opposite side. Only biting itself ends the game."
+            : "The snake dies when it hits a wall or itself.";
 }
 
 
@@ -1157,6 +1318,7 @@ function startGame() {
 
     gameRunning = true;
     gameOver = false;
+    paused = false;
 
     spawnApple();
     spawnCoin();
@@ -1203,6 +1365,7 @@ function gameLoop(timestamp) {
     }
 
     if (
+        !paused &&
         timestamp - lastStepTime >=
         getStepDelay()
     ) {
@@ -1269,7 +1432,14 @@ function update() {
     };
 
 
-    if (
+    if (settings.wallMode === "wrap") {
+
+        /* Pass Through: leave one side, enter the opposite side. */
+
+        newHead.x = (newHead.x + GRID) % GRID;
+        newHead.y = (newHead.y + GRID) % GRID;
+
+    } else if (
         newHead.x < 0 ||
         newHead.x >= GRID ||
         newHead.y < 0 ||
@@ -1814,7 +1984,8 @@ function showRewardAdvertisement() {
         !navigator.onLine ||
         !gameOver ||
         rewardAdOpen ||
-        rewardAlreadyGranted
+        rewardAlreadyGranted ||
+        !adAllowed()
     ) {
         return;
     }
@@ -1908,7 +2079,11 @@ skipRewardBtn.addEventListener(
         rewardAdStatus.textContent =
             "Reward added: +10 coins.";
 
-        syncRewards();
+        /* No Firebase here. Coins stay in RAM until the player leaves. */
+
+        registerAdCompleted();
+
+        persistUncredited();
 
 
         setTimeout(
@@ -2205,18 +2380,71 @@ canvas.addEventListener(
    SETTINGS UI
    ============================================================ */
 
+let settingsSnapshot = null;
+
+
+function openSettings() {
+
+    initAudio();
+    soundClick();
+
+    /* remember the old values so closing without Save undoes changes */
+
+    settingsSnapshot = { ...settings };
+
+    /* the snake waits while Settings is open */
+
+    if (gameRunning) {
+        paused = true;
+    }
+
+    speedRange.value = settings.speed;
+
+    updateSpeedText();
+    updateDifficultyButtons();
+    updateWallButtons();
+
+    showOverlay(settingsOverlay);
+}
+
+
+function closeSettings() {
+
+    hideOverlay(settingsOverlay);
+
+    if (paused) {
+        paused = false;
+        lastStepTime = performance.now();
+    }
+}
+
+
 settingsBtn.addEventListener(
     "click",
-    () => {
-
-        initAudio();
-        soundClick();
-
-        showOverlay(
-            settingsOverlay
-        );
-    }
+    openSettings
 );
+
+
+document
+.querySelectorAll(".wall-btn")
+.forEach(button => {
+
+    button.addEventListener(
+        "click",
+        () => {
+
+            initAudio();
+            soundClick();
+
+            settings.wallMode =
+                button.dataset.wall === "wrap"
+                    ? "wrap"
+                    : "solid";
+
+            updateWallButtons();
+        }
+    );
+});
 
 
 speedRange.addEventListener(
@@ -2257,14 +2485,18 @@ saveSettingsBtn.addEventListener(
                 speedRange.value
             );
 
-        localStorage.setItem(
-            STORAGE_KEYS.SETTINGS,
-            JSON.stringify(settings)
-        );
+        try {
 
-        hideOverlay(
-            settingsOverlay
-        );
+            localStorage.setItem(
+                STORAGE_KEYS.SETTINGS,
+                JSON.stringify(settings)
+            );
+
+        } catch {}
+
+        settingsSnapshot = null;
+
+        closeSettings();
     }
 );
 
@@ -2301,13 +2533,15 @@ resetDataBtn.addEventListener(
 
         settings = {
             speed:2,
-            difficulty:"normal"
+            difficulty:"normal",
+            wallMode:"solid"
         };
 
         speedRange.value = 2;
 
         updateSpeedText();
         updateDifficultyButtons();
+        updateWallButtons();
 
         updateStats();
 
@@ -2370,9 +2604,14 @@ settingsOverlay.addEventListener(
 
             soundClick();
 
-            hideOverlay(
-                settingsOverlay
-            );
+            /* closed without Save: undo unsaved changes */
+
+            if (settingsSnapshot) {
+                settings = settingsSnapshot;
+                settingsSnapshot = null;
+            }
+
+            closeSettings();
         }
     }
 );
@@ -2405,8 +2644,11 @@ rewardAdOverlay.addEventListener(
 
 loadSettings();
 
+speedRange.value = settings.speed;
+
 updateSpeedText();
 updateDifficultyButtons();
+updateWallButtons();
 updateStats();
 
 
@@ -2446,10 +2688,57 @@ setTimeout(
 
 
 /*
-   Kick off Firebase loading in the background - completely
-   decoupled from game startup above.
+   Download the Firebase files quietly. The DATABASE is NOT opened
+   here - it is opened only when the player leaves (Back button).
 */
-initFirebase();
+loadFirebaseModules().catch(() => {});
+
+
+/*
+   Developer ad: every 20 seconds a small bar slides in from the top,
+   stays 10 seconds, then slides away. It is not a Google ad.
+*/
+(function startDeveloperAd() {
+
+    const bar = document.getElementById("devAd");
+
+    if (!bar) return;
+
+    function cycle() {
+
+        setTimeout(() => {
+
+            bar.classList.add("show");
+
+            setTimeout(() => {
+
+                bar.classList.remove("show");
+
+                cycle();
+
+            }, 10000);
+
+        }, 20000);
+    }
+
+    cycle();
+
+})();
+
+
+/*
+   Tell the JAVICASH dashboard that this game can save coins when the
+   player presses Back.
+*/
+if (window.parent !== window) {
+
+    try {
+        window.parent.postMessage(
+            { type: "JAVICASH_GAME_READY" },
+            "*"
+        );
+    } catch {}
+}
 
 </script>
 
