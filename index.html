@@ -749,7 +749,12 @@ async function doFlush() {
 
         debugSync("could not save coins", error);
 
-        return { ok: false, credited: 0, reason: "failed" };
+        return {
+            ok: false,
+            credited: 0,
+            reason: "failed",
+            detail: String((error && error.message) || error)
+        };
     }
 
     /* Saved. Local memory goes back to zero. */
@@ -890,7 +895,9 @@ window.addEventListener(
                 {
                     type: "JAVICASH_FLUSH_DONE",
                     ok: result.ok,
-                    credited: result.credited || 0
+                    credited: result.credited || 0,
+                    reason: result.reason || "",
+                    detail: result.detail || ""
                 },
                 "*"
             );
