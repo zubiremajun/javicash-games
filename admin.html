@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JAVICASH — Super Admin Control Center</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #6c5ce7; --primary-dark: #5142c4; --accent: #00cec9;
+      --success: #2ed573; --danger: #ff4757; --warning: #ffa502;
+      --bg: #070611; --panel: rgba(255,255,255,.055); --border: rgba(255,255,255,.10);
+      --text: #ffffff; --muted: #9b9aaa; --shadow: 0 20px 60px rgba(0,0,0,.45);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      min-height: 100vh;
+      background: radial-gradient(circle at top left, rgba(108,92,231,.18), transparent 35%),
+                  radial-gradient(circle at bottom right, rgba(0,206,201,.10), transparent 30%), var(--bg);
+      color: var(--text); font-family: "Poppins", sans-serif;
+    }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+
+    /* SECURITY / LOGIN */
+    #security-screen {
+      position: fixed; inset: 0; z-index: 999999; display: flex;
+      justify-content: center; align-items: center; background: #020204;
+      text-align: center; padding: 25px;
+    }
+    .security-box {
+      width: min(430px, 100%); padding: 35px 25px;
+      border: 1px solid rgba(255,255,255,.08); border-radius: 24px;
+      background: rgba(255,255,255,.03); box-shadow: var(--shadow);
+    }
+    .security-icon {
+      width: 90px; height: 90px; margin: auto auto 20px; display: grid; place-items: center;
+      border-radius: 50%; background: rgba(108,92,231,.14); color: var(--accent); font-size: 40px;
+    }
+    .security-box h1 { font-size: 25px; margin-bottom: 10px; }
+    .security-box p { color: var(--muted); font-size: 14px; line-height: 1.7; margin-bottom: 14px; }
+    #login-form { display: none; text-align: left; }
+    #login-form .input { margin-bottom: 12px; }
+
+    #app { display: none; }
+    .layout { display: flex; min-height: 100vh; }
+
+    /* SIDEBAR */
+    .sidebar {
+      position: fixed; left: 0; top: 0; bottom: 0; width: 250px; padding: 22px 15px;
+      background: rgba(8,7,18,.92); backdrop-filter: blur(20px);
+      border-right: 1px solid var(--border); z-index: 1000; overflow-y: auto;
+    }
+    .brand { padding: 10px 14px 25px; }
+    .brand-title { font-size: 22px; font-weight: 800; letter-spacing: 1px; }
+    .brand-title span, .mobile-brand span { color: var(--accent); }
+    .brand-subtitle { color: var(--muted); font-size: 11px; margin-top: 3px; }
+    .nav { display: flex; flex-direction: column; gap: 7px; }
+    .nav-btn {
+      width: 100%; display: flex; align-items: center; gap: 13px; padding: 13px 14px;
+      border: 0; border-radius: 12px; color: var(--muted); background: transparent;
+      text-align: left; transition: .2s ease;
+    }
+    .nav-btn:hover, .nav-btn.active { color: white; background: rgba(108,92,231,.18); }
+    .nav-btn i { width: 20px; text-align: center; }
+    .nav-count {
+      margin-left: auto; min-width: 23px; height: 23px; padding: 0 6px; display: grid;
+      place-items: center; background: var(--danger); border-radius: 20px;
+      color: white; font-size: 11px; font-weight: 700;
+    }
+
+    /* MAIN */
+    .main { width: calc(100% - 250px); margin-left: 250px; padding: 25px; }
+    .topbar {
+      min-height: 70px; display: flex; justify-content: space-between; align-items: center;
+      padding: 15px 20px; margin-bottom: 25px; background: var(--panel);
+      border: 1px solid var(--border); border-radius: 18px; backdrop-filter: blur(18px);
+    }
+    .page-title { font-size: 20px; font-weight: 700; }
+    .admin-status { display: flex; align-items: center; gap: 10px; color: var(--success); font-size: 12px; }
+    .online-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--success); box-shadow: 0 0 12px var(--success); }
+
+    .section { display: none; }
+    .section.active { display: block; }
+    .section-title { margin-bottom: 20px; }
+    .section-title h2 { font-size: 24px; }
+    .section-title p { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 22px; }
+    .stat-card, .card {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 18px;
+      box-shadow: var(--shadow); backdrop-filter: blur(15px);
+    }
+    .stat-card { padding: 20px; }
+    .stat-icon {
+      width: 45px; height: 45px; display: grid; place-items: center; margin-bottom: 14px;
+      border-radius: 13px; background: rgba(108,92,231,.16); color: var(--primary); font-size: 19px;
+    }
+    .stat-label { color: var(--muted); font-size: 12px; }
+    .stat-value { font-size: 25px; font-weight: 800; margin-top: 3px; }
+    .card { padding: 22px; margin-bottom: 20px; }
+    .card-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; gap: 10px; }
+    .card-title h3 { font-size: 17px; }
+
+    /* FORM */
+    .form-group { margin-bottom: 14px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-label { display: block; margin-bottom: 7px; color: var(--muted); font-size: 12px; }
+    .input, .select, .textarea {
+      width: 100%; padding: 13px 14px; border: 1px solid var(--border); border-radius: 11px;
+      outline: none; background: rgba(0,0,0,.30); color: white; transition: .2s;
+    }
+    .select option { background: #111020; color: white; }
+    .textarea { min-height: 110px; resize: vertical; }
+    .input:focus, .select:focus, .textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(108,92,231,.10); }
+
+    /* BUTTONS */
+    .btn {
+      border: 0; border-radius: 11px; padding: 12px 16px; display: inline-flex;
+      justify-content: center; align-items: center; gap: 8px; color: white; font-weight: 600; transition: .2s;
+    }
+    .btn:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-primary { background: var(--primary); }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-1px); }
+    .btn-success { background: var(--success); color: #07120b; }
+    .btn-danger { background: var(--danger); }
+    .btn-warning { background: var(--warning); color: #171000; }
+    .btn-muted { background: rgba(255,255,255,.08); }
+    .btn-full { width: 100%; }
+    .btn-sm { padding: 7px 11px; font-size: 11px; border-radius: 9px; }
+
+    /* MEMBER */
+    .search-row { display: flex; gap: 10px; }
+    .search-row .input { flex: 1; }
+    .member-result { display: none; margin-top: 18px; }
+    .member-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .member-field { padding: 13px; border-radius: 12px; background: rgba(255,255,255,.035); border: 1px solid var(--border); }
+    .member-field small { display: block; color: var(--muted); font-size: 10px; margin-bottom: 4px; word-break: break-all; }
+    .member-field strong { font-size: 13px; word-break: break-word; }
+    .danger-note {
+      margin-top: 15px; padding: 12px; background: rgba(255,71,87,.08);
+      border: 1px solid rgba(255,71,87,.20); border-radius: 10px; color: #ff9ca6; font-size: 11px;
+    }
+
+    /* REQUESTS / LISTS */
+    .request-list { display: flex; flex-direction: column; gap: 12px; }
+    .request { padding: 16px; border-radius: 14px; background: rgba(255,255,255,.035); border: 1px solid var(--border); }
+    .request-top { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 10px; }
+    .request-id { color: var(--accent); font-weight: 700; word-break: break-all; }
+    .status { padding: 5px 9px; border-radius: 20px; font-size: 10px; font-weight: 700; height: fit-content; white-space: nowrap; }
+    .status-pending { background: rgba(255,165,2,.12); color: var(--warning); }
+    .status-approved, .status-completed { background: rgba(46,213,115,.12); color: var(--success); }
+    .status-rejected { background: rgba(255,71,87,.12); color: var(--danger); }
+    .request-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .request-info { font-size: 12px; color: var(--muted); }
+    .request-info b { color: white; display: block; margin-top: 2px; word-break: break-word; }
+    .request-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+    .item-row { display: flex; gap: 12px; align-items: center; }
+    .item-img { width: 52px; height: 52px; border-radius: 11px; object-fit: cover; background: rgba(0,0,0,.35); flex-shrink: 0; }
+    .item-body { flex: 1; min-width: 0; }
+    .item-body b { display: block; font-size: 14px; word-break: break-word; }
+    .item-body small { color: var(--muted); font-size: 11px; word-break: break-all; }
+
+    /* TABLE */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    th { color: var(--muted); font-weight: 600; font-size: 11px; }
+
+    /* MODAL */
+    .modal {
+      display: none; position: fixed; inset: 0; z-index: 9999; justify-content: center;
+      align-items: center; padding: 20px; background: rgba(0,0,0,.80); backdrop-filter: blur(10px);
+    }
+    .modal.show { display: flex; }
+    .modal-box {
+      width: min(520px, 100%); max-height: 90vh; overflow-y: auto; padding: 24px;
+      border: 1px solid var(--border); border-radius: 20px; background: #111020; box-shadow: var(--shadow);
+    }
+
+    #toast {
+      position: fixed; right: 20px; bottom: 20px; max-width: 350px; padding: 14px 18px;
+      border-radius: 12px; background: #17162a; border: 1px solid var(--border);
+      box-shadow: var(--shadow); transform: translateY(100px); opacity: 0; transition: .25s; z-index: 999999;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+
+    .mobile-header { display: none; }
+
+    @media (max-width: 1000px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 700px) {
+      body { padding-bottom: 80px; }
+      .sidebar { display: none; }
+      .main { width: 100%; margin-left: 0; padding: 12px; }
+      .mobile-header {
+        display: flex; position: sticky; top: 0; z-index: 900; justify-content: space-between;
+        align-items: center; padding: 13px 5px 15px; background: rgba(7,6,17,.92); backdrop-filter: blur(20px);
+      }
+      .mobile-brand { font-weight: 800; }
+      .topbar { display: none; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .stat-card { padding: 15px; }
+      .stat-value { font-size: 21px; }
+      .search-row { flex-direction: column; }
+      .member-grid, .form-row { grid-template-columns: 1fr; }
+      .request-grid { grid-template-columns: repeat(2, 1fr); }
+      .bottom-nav {
+        position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 3000; display: flex;
+        overflow-x: auto; padding: 7px; border: 1px solid var(--border); border-radius: 18px;
+        background: rgba(10,9,22,.94); backdrop-filter: blur(20px);
+      }
+      .bottom-nav button {
+        position: relative; flex: 0 0 auto; min-width: 66px; border: 0; background: transparent;
+        color: var(--muted); padding: 9px 6px; font-size: 10px;
+      }
+      .bottom-nav button i { display: block; font-size: 17px; margin-bottom: 3px; }
+      .bottom-nav button.active { color: var(--accent); }
+      .bottom-count {
+        position: absolute; top: 1px; right: 14px; min-width: 16px; height: 16px; display: grid;
+        place-items: center; border-radius: 20px; background: var(--danger); color: white; font-size: 8px;
+      }
+    }
+    @media (min-width: 701px) { .bottom-nav { display: none; } }
+  </style>
+</head>
+
+<body>
+
+  <!-- LOGIN / SECURITY SCREEN -->
+  <div id="security-screen">
+    <div class="security-box">
+      <div class="security-icon"><i class="fa-solid fa-shield-halved"></i></div>
+      <h1>JAVICASH ADMIN</h1>
+      <p id="security-message">Verifying administrator authentication...</p>
+
+      <div id="login-form">
+        <input class="input" id="login-email" type="email" placeholder="Admin Gmail" autocomplete="username">
+        <input class="input" id="login-pass" type="password" placeholder="Password" autocomplete="current-password">
+        <button class="btn btn-primary btn-full" id="login-btn">
+          <i class="fa-solid fa-right-to-bracket"></i> Login
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="app">
+    <div class="layout">
+
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-title">JAVI<span>CASH</span></div>
+          <div class="brand-subtitle">Super Admin Control Center</div>
+        </div>
+
+        <nav class="nav">
+          <button class="nav-btn active" data-section="overview"><i class="fa-solid fa-chart-pie"></i> Overview</button>
+          <button class="nav-btn" data-section="members"><i class="fa-solid fa-users"></i> Members</button>
+          <button class="nav-btn" data-section="withdrawals"><i class="fa-solid fa-hand-holding-dollar"></i> Withdrawals
+            <span class="nav-count" id="side-withdraw-count">0</span></button>
+          <button class="nav-btn" data-section="orders"><i class="fa-solid fa-box"></i> Orders
+  <span class="nav-count" id="side-order-count">0</span></button>
+          <button class="nav-btn" data-section="notifications"><i class="fa-solid fa-bullhorn"></i> Notifications</button>
+          <button class="nav-btn" data-section="games"><i class="fa-solid fa-gamepad"></i> Games</button>
+          <button class="nav-btn" data-section="products"><i class="fa-solid fa-bag-shopping"></i> Products</button>
+          <button class="nav-btn" data-section="content"><i class="fa-solid fa-photo-film"></i> Content</button>
+          <button class="nav-btn" id="desktop-logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+        </nav>
+      </aside>
+
+      <main class="main">
+
+        <div class="mobile-header">
+          <div class="mobile-brand">JAVI<span>CASH</span></div>
+          <button class="btn btn-danger" id="mobile-logout" style="padding:8px 12px;font-size:11px;">
+            <i class="fa-solid fa-power-off"></i>
+          </button>
+        </div>
+
+        <div class="topbar">
+          <div class="page-title" id="page-title">Admin Overview</div>
+          <div class="admin-status"><span class="online-dot"></span> ADMIN VERIFIED</div>
+        </div>
+
+        <!-- OVERVIEW -->
+        <section class="section active" id="section-overview">
+          <div class="section-title" style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+            <div>
+              <h2>Dashboard Overview</h2>
+              <p>Members, OTP usage and password changes.</p>
+            </div>
+            <button class="btn btn-primary btn-sm" id="refresh-btn"><i class="fa-solid fa-rotate"></i> Refresh</button>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+              <div class="stat-label">Registered Members</div><div class="stat-value" id="stat-members">0</div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-user-plus"></i></div>
+              <div class="stat-label">New Today</div><div class="stat-value" id="stat-today">0</div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-coins"></i></div>
+              <div class="stat-label">Total Coins</div><div class="stat-value" id="stat-coins">0</div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-money-bill-transfer"></i></div>
+              <div class="stat-label">Pending Withdrawals</div><div class="stat-value" id="stat-withdrawals">0</div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-envelope-circle-check"></i></div>
+              <div class="stat-label">OTP Used Today</div><div class="stat-value" id="stat-otp">0</div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-key"></i></div>
+              <div class="stat-label">Password Changes Today</div><div class="stat-value" id="stat-pw">0</div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-gamepad"></i></div>
+              <div class="stat-label">Games</div><div class="stat-value" id="stat-games">0</div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-bag-shopping"></i></div>
+              <div class="stat-label">Products</div><div class="stat-value" id="stat-products">0</div></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title"><h3><i class="fa-solid fa-calendar-days"></i> Daily Report (last 30 days)</h3></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Date</th><th>New Members</th><th>OTP Used</th><th>Password Changes</th></tr></thead>
+                <tbody id="day-table"><tr><td colspan="4" style="color:var(--muted)">Loading...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              <h3><i class="fa-solid fa-envelope"></i> OTP / Password Detail by Date</h3>
+              <input class="input" type="date" id="report-date" style="width:auto;padding:8px 10px;">
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Email</th><th>OTP Count</th><th>Purpose</th><th>Last Time</th></tr></thead>
+                <tbody id="otp-table"><tr><td colspan="4" style="color:var(--muted)">Loading...</td></tr></tbody>
+              </table>
+            </div>
+            <div class="table-wrap" style="margin-top:18px;">
+              <table>
+                <thead><tr><th>Password Changed (Email)</th><th>Unique ID</th><th>Time</th></tr></thead>
+                <tbody id="pw-table"><tr><td colspan="3" style="color:var(--muted)">Loading...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title"><h3><i class="fa-solid fa-shield-halved"></i> Security Status</h3></div>
+            <p style="color:var(--muted);font-size:13px;line-height:1.8;">
+              Admin access is controlled by Firebase Authentication and Realtime Database Security Rules.
+              The client-side check is only for convenience.
+            </p>
+          </div>
+        </section>
+
+        <!-- MEMBERS -->
+        <section class="section" id="section-members">
+          <div class="section-title">
+            <h2>Member Search</h2>
+            <p>Search by Unique Member ID or Gmail. All stored data is shown.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-title"><h3><i class="fa-solid fa-magnifying-glass"></i> Track Member</h3></div>
+
+            <div class="search-row">
+              <input class="input" id="member-search-input" placeholder="Unique Member ID or Gmail" autocomplete="off">
+              <button class="btn btn-primary" id="member-search-btn"><i class="fa-solid fa-search"></i> Search</button>
+            </div>
+
+            <div class="member-result" id="member-result">
+              <div class="member-grid" id="member-grid"></div>
+              <div class="danger-note">
+                <i class="fa-solid fa-lock"></i>
+                Passwords are never stored or displayed. Firebase Authentication does not expose passwords.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- WITHDRAWALS -->
+        <section class="section" id="section-withdrawals">
+          <div class="section-title">
+            <h2>Withdrawal Requests</h2>
+            <p>Realtime member withdrawal requests (latest 200).</p>
+          </div>
+          <div class="card">
+            <div class="request-list" id="withdrawal-list">
+              <p style="color:var(--muted);font-size:13px;">Loading withdrawal requests...</p>
+            </div>
+          </div>
+        </section>
+        <!-- ORDERS -->
+<section class="section" id="section-orders">
+  <div class="section-title">
+    <h2>Product Orders</h2>
+    <p>Realtime orders placed by members (latest 200).</p>
+  </div>
+  <div class="card">
+    <div class="request-list" id="orders-list">
+      <p style="color:var(--muted);font-size:13px;">Loading orders...</p>
+    </div>
+  </div>
+</section>
+
+        <!-- NOTIFICATIONS -->
+        <section class="section" id="section-notifications">
+          <div class="section-title">
+            <h2>Global Notification</h2>
+            <p>Shown to every logged-in member as an admin notification.</p>
+          </div>
+          <div class="card">
+            <div class="form-group">
+              <label class="form-label">Title (optional)</label>
+              <input class="input" id="notification-title" placeholder="Notice title">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Notification Message</label>
+              <textarea class="textarea" id="notification-message" placeholder="Write your announcement..."></textarea>
+            </div>
+            <button class="btn btn-primary btn-full" id="publish-notification">
+              <i class="fa-solid fa-paper-plane"></i> Publish Global Notification
+            </button>
+          </div>
+        </section>
+
+        <!-- GAMES -->
+        <section class="section" id="section-games">
+          <div class="section-title">
+            <h2>Games</h2>
+            <p>Saved to Realtime Database at games/&lt;Game ID&gt; — the same structure your dashboard uses.</p>
+          </div>
+
+          <div class="card">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Game ID (auto, e.g. game_004)</label>
+                <input class="input" id="game-id" placeholder="game_004">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Title</label>
+                <input class="input" id="game-title" placeholder="Snake Game">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Game URL (gameUrl)</label>
+              <input class="input" id="game-url" placeholder="https://username.github.io/javicash-game/">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Icon URL (iconUrl)</label>
+              <input class="input" id="game-icon" placeholder="https://i.postimg.cc/.../icon.png">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Is Active (isActive)</label>
+              <select class="select" id="game-active">
+                <option value="true">true — visible to users</option>
+                <option value="false">false — hidden</option>
+              </select>
+            </div>
+            <button class="btn btn-primary btn-full" id="upload-game">
+              <i class="fa-solid fa-cloud-arrow-up"></i> Upload Game
+            </button>
+          </div>
+
+          <div class="card">
+            <div class="card-title"><h3>Uploaded Games</h3></div>
+            <div class="request-list" id="games-list">
+              <p style="color:var(--muted);font-size:13px;">Loading...</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- PRODUCTS -->
+        <section class="section" id="section-products">
+          <div class="section-title">
+            <h2>Products</h2>
+            <p>Saved to products/ and shown on the member dashboard home.</p>
+          </div>
+
+          <div class="card">
+            <div class="form-group">
+              <label class="form-label">Product Name</label>
+              <input class="input" id="product-title" placeholder="Product name">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Image URL</label>
+              <input class="input" id="product-image" placeholder="https://i.postimg.cc/.../image.jpg">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Price</label>
+                <input class="input" id="product-price" type="number" min="0" step="any" placeholder="0">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Stock</label>
+                <input class="input" id="product-stock" type="number" min="0" step="1" placeholder="0">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Coins required to order</label>
+              <input class="input" id="product-coins" type="number" min="0" step="1" placeholder="Example: 500">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Description</label>
+              <textarea class="textarea" id="product-description" placeholder="Write product details..."></textarea>
+            </div>
+            <button class="btn btn-primary btn-full" id="upload-product">
+              <i class="fa-solid fa-upload"></i> Upload Product
+            </button>
+          </div>
+
+          <div class="card">
+            <div class="card-title"><h3>Uploaded Products</h3></div>
+            <div class="request-list" id="products-list">
+              <p style="color:var(--muted);font-size:13px;">Loading...</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- CONTENT -->
+        <section class="section" id="section-content">
+          <div class="section-title">
+            <h2>Content Management</h2>
+            <p>Publish text, image or video content to the member dashboard.</p>
+          </div>
+          <div class="card">
+            <div class="form-group">
+              <label class="form-label">Content Title</label>
+              <input class="input" id="content-title" placeholder="Content title">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Description / Announcement</label>
+              <textarea class="textarea" id="content-description" placeholder="Write content..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Content Type</label>
+              <select class="select" id="content-type">
+                <option value="announcement">Announcement</option>
+                <option value="image">Image</option>
+                <option value="video">Video</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Media URL</label>
+              <input class="input" id="content-url" placeholder="https://...">
+            </div>
+            <button class="btn btn-primary btn-full" id="publish-content">
+              <i class="fa-solid fa-upload"></i> Publish Content
+            </button>
+          </div>
+        </section>
+
+      </main>
+    </div>
+
+    <!-- MOBILE BOTTOM NAV -->
+    <nav class="bottom-nav">
+      <button class="active" data-section="overview"><i class="fa-solid fa-chart-pie"></i>Home</button>
+      <button data-section="members"><i class="fa-solid fa-users"></i>Members</button>
+      <button data-section="withdrawals"><i class="fa-solid fa-money-bill-transfer"></i>Withdraw
+        <span class="bottom-count" id="bottom-withdraw-count">0</span></button>
+      <button data-section="orders"><i class="fa-solid fa-box"></i>Orders
+  <span class="bottom-count" id="bottom-order-count">0</span></button>
+      <button data-section="notifications"><i class="fa-solid fa-bullhorn"></i>Notice</button>
+      <button data-section="games"><i class="fa-solid fa-gamepad"></i>Games</button>
+      <button data-section="products"><i class="fa-solid fa-bag-shopping"></i>Products</button>
+      <button data-section="content"><i class="fa-solid fa-photo-film"></i>Content</button>
+    </nav>
+  </div>
+
+  <!-- WITHDRAW MODAL -->
+  <div class="modal" id="withdraw-modal">
+    <div class="modal-box">
+      <div class="card-title" style="margin-bottom:20px;">
+        <h3><i class="fa-solid fa-money-check-dollar"></i> Manage Withdrawal</h3>
+        <button class="btn btn-muted" id="close-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div id="modal-request-details"></div>
+
+      <div class="form-group" style="margin-top:18px;">
+        <label class="form-label">Rejection Reason</label>
+        <textarea class="textarea" id="rejection-reason" placeholder="Required when rejecting..."></textarea>
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-success" id="approve-request" style="flex:1;"><i class="fa-solid fa-check"></i> Approve</button>
+        <button class="btn btn-danger" id="reject-request" style="flex:1;"><i class="fa-solid fa-xmark"></i> Reject</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ORDER MODAL -->
+<div class="modal" id="order-modal">
+  <div class="modal-box">
+    <div class="card-title" style="margin-bottom:20px;">
+      <h3><i class="fa-solid fa-box"></i> Manage Order</h3>
+      <button class="btn btn-muted" id="close-order-modal"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="order-modal-details"></div>
+    <div class="form-group" style="margin-top:18px;">
+      <label class="form-label">Rejection Reason (only for Reject)</label>
+      <textarea class="textarea" id="order-reject-reason" placeholder="Required when rejecting..."></textarea>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-success btn-sm" data-ostatus="confirmed"><i class="fa-solid fa-check"></i> Confirm</button>
+      <button class="btn btn-warning btn-sm" data-ostatus="shipped"><i class="fa-solid fa-truck"></i> Shipped</button>
+      <button class="btn btn-primary btn-sm" data-ostatus="delivered"><i class="fa-solid fa-box-open"></i> Delivered</button>
+      <button class="btn btn-danger btn-sm" data-ostatus="rejected"><i class="fa-solid fa-xmark"></i> Reject</button>
+    </div>
+  </div>
+</div>
+  <div id="toast"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      getDatabase, ref, get, set, update, remove, onValue,
+      query, orderByChild, equalTo, limitToLast
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCwCrQBaYWr6Nr8jdZeeGGyQbjsFW-7LLQ",
+      authDomain: "javicash-13a23.firebaseapp.com",
+      projectId: "javicash-13a23",
+      storageBucket: "javicash-13a23.firebasestorage.app",
+      messagingSenderId: "940101890411",
+      appId: "1:940101890411:web:e4554cbf62319dd8f01c2e",
+      measurementId: "G-G6957LRB21",
+      databaseURL: "https://javicash-13a23-default-rtdb.firebaseio.com"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    /* Frontend convenience check only. Real security = Firebase Rules. */
+    const ADMIN_EMAIL = "zubirosmani0@gmail.com";
+
+    let currentUser = null;
+    let selectedRequestId = null;
+    let withdrawalData = {};
+    let gamesData = {};
+    let productsData = {};
+    let started = false;
+    let unsubs = [];
+    let lastLoginMsg = "";
+    let cache = { regByDay: {}, otp: [], pw: [] };
+
+    const $ = id => document.getElementById(id);
+
+    /* ---------- HELPERS ---------- */
+
+    function escapeHTML(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+    }
+
+    function showToast(message, type = "normal") {
+      const toast = $("toast");
+      toast.textContent = message;
+      toast.style.borderColor =
+        type === "error" ? "rgba(255,71,87,.45)" :
+        type === "success" ? "rgba(46,213,115,.45)" : "rgba(255,255,255,.1)";
+      toast.classList.add("show");
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => toast.classList.remove("show"), 3200);
+    }
+
+    function toMs(v) {
+      if (v === null || v === undefined || v === "") return 0;
+      if (typeof v === "number") return v < 1e12 ? v * 1000 : v;
+      const s = String(v).trim();
+      if (/^\d+$/.test(s)) { const n = Number(s); return n < 1e12 ? n * 1000 : n; }
+      const p = Date.parse(s);
+      return Number.isNaN(p) ? 0 : p;
+    }
+
+    function pad(n) { return String(n).padStart(2, "0"); }
+
+    function dayKey(ms) {
+      const d = new Date(ms);
+      return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+    }
+
+    function formatDate(v) {
+      if (!v) return "N/A";
+      const ms = toMs(v);
+      if (!ms) return String(v);
+      return new Date(ms).toLocaleString();
+    }
+
+    function setBadge(n) {
+      const t = n > 99 ? "99+" : String(n);
+      $("side-withdraw-count").textContent = t;
+      $("bottom-withdraw-count").textContent = t;
+      $("stat-withdrawals").textContent = n.toLocaleString();
+    }
+
+    /* ---------- LOGIN ---------- */
+
+    function showLogin(msg) {
+      if (msg) lastLoginMsg = msg;
+      $("security-screen").style.display = "flex";
+      $("app").style.display = "none";
+      $("login-form").style.display = "block";
+      $("security-message").textContent = lastLoginMsg || "Login with the administrator Gmail and password.";
+    }
+
+    function friendlyAuthError(e) {
+      const c = (e && e.code) || "";
+      if (c.includes("invalid-credential") || c.includes("wrong-password") || c.includes("user-not-found") || c.includes("invalid-email"))
+        return "Wrong email or password.";
+      if (c.includes("too-many-requests")) return "Too many attempts. Please wait a few minutes and try again.";
+      if (c.includes("network")) return "Network error. Check your internet connection.";
+      return "Login failed: " + ((e && e.message) || "unknown error");
+    }
+
+    async function doLogin() {
+      const email = $("login-email").value.trim().toLowerCase();
+      const pass = $("login-pass").value;
+      const msg = $("security-message");
+
+      if (!email || !pass) { msg.textContent = "Enter email and password."; return; }
+      if (email !== ADMIN_EMAIL.toLowerCase()) {
+        msg.textContent = "This account is not authorized as JAVICASH administrator.";
+        return;
+      }
+
+      const btn = $("login-btn");
+      btn.disabled = true;
+      msg.textContent = "Signing in...";
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        $("login-pass").value = "";
+      } catch (e) {
+        console.error(e);
+        msg.textContent = friendlyAuthError(e);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    $("login-btn").addEventListener("click", doLogin);
+    $("login-pass").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
+    $("login-email").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
+
+    onAuthStateChanged(auth, async user => {
+      currentUser = user;
+
+      if (!user) {
+        stopListeners();
+        showLogin("");
+        return;
+      }
+
+      if ((user.email || "").toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+        await signOut(auth);
+        showLogin("This account is not authorized as JAVICASH administrator.");
+        return;
+      }
+
+      $("security-screen").style.display = "none";
+      $("app").style.display = "block";
+
+      if (!started) {
+        started = true;
+        startApp();
+      }
+    });
+
+    function stopListeners() {
+      unsubs.forEach(fn => { try { fn(); } catch (e) {} });
+      unsubs = [];
+      started = false;
+    }
+
+    /* ---------- NAVIGATION ---------- */
+
+    const titles = {
+      overview: "Admin Overview", members: "Member Management", withdrawals: "Withdrawal Requests",
+      orders: "Product Orders",
+      notifications: "Global Notifications", games: "Games", products: "Products", content: "Content Management"
+    };
+
+    document.querySelectorAll("[data-section]").forEach(button => {
+      button.addEventListener("click", () => {
+        const section = button.dataset.section;
+        document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+        const target = $("section-" + section);
+        if (target) target.classList.add("active");
+        document.querySelectorAll("[data-section]").forEach(i => i.classList.remove("active"));
+        document.querySelectorAll('[data-section="' + section + '"]').forEach(i => i.classList.add("active"));
+        $("page-title").textContent = titles[section] || "JAVICASH Admin";
+        window.scrollTo(0, 0);
+      });
+    });
+
+    /* ---------- START ---------- */
+
+    function startApp() {
+      $("report-date").value = dayKey(Date.now());
+      loadStats();
+      listenToWithdrawals();
+      listenToOrders();
+      listenToGames();
+      listenToProducts();
+    }
+
+    /* ---------- STATS (users, OTP, password changes) ---------- */
+
+    async function loadStats() {
+      const btn = $("refresh-btn");
+      btn.disabled = true;
+      try {
+        const [uSnap, oSnap, pSnap] = await Promise.all([
+          get(ref(db, "users")),
+          get(query(ref(db, "otp_logs"), orderByChild("createdAt"), limitToLast(5000))),
+          get(query(ref(db, "password_changes"), orderByChild("createdAt"), limitToLast(5000)))
+        ]);
+
+        let members = 0, coins = 0;
+        const regByDay = {};
+        if (uSnap.exists()) {
+          Object.values(uSnap.val()).forEach(u => {
+            if (!u || typeof u !== "object") return;
+            members++;
+            coins += Number(u.coins || 0) || 0;
+            const ms = toMs(u.created_at || u.createdAt);
+            if (ms) { const k = dayKey(ms); regByDay[k] = (regByDay[k] || 0) + 1; }
+          });
+        }
+
+        cache.regByDay = regByDay;
+        cache.otp = oSnap.exists() ? Object.values(oSnap.val()).filter(x => x && typeof x === "object") : [];
+        cache.pw = pSnap.exists() ? Object.values(pSnap.val()).filter(x => x && typeof x === "object") : [];
+
+        const today = dayKey(Date.now());
+        $("stat-members").textContent = members.toLocaleString();
+        $("stat-coins").textContent = coins.toLocaleString();
+        $("stat-today").textContent = (regByDay[today] || 0).toLocaleString();
+        $("stat-otp").textContent = cache.otp.filter(x => logDay(x) === today).length.toLocaleString();
+        $("stat-pw").textContent = cache.pw.filter(x => logDay(x) === today).length.toLocaleString();
+
+        renderDayTable();
+        renderDayReport();
+      } catch (error) {
+        console.error(error);
+        showToast("Unable to load stats: " + error.message, "error");
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function logDay(x) {
+      return x.dateKey || (toMs(x.createdAt) ? dayKey(toMs(x.createdAt)) : "");
+    }
+
+    function renderDayTable() {
+      const otpByDay = {}, pwByDay = {};
+      cache.otp.forEach(x => { const k = logDay(x); if (k) otpByDay[k] = (otpByDay[k] || 0) + 1; });
+      cache.pw.forEach(x => { const k = logDay(x); if (k) pwByDay[k] = (pwByDay[k] || 0) + 1; });
+
+      const days = new Set([...Object.keys(cache.regByDay), ...Object.keys(otpByDay), ...Object.keys(pwByDay)]);
+      const list = [...days].sort().reverse().slice(0, 30);
+
+      $("day-table").innerHTML = list.length
+        ? list.map(d => `<tr><td>${escapeHTML(d)}</td><td>${cache.regByDay[d] || 0}</td><td>${otpByDay[d] || 0}</td><td>${pwByDay[d] || 0}</td></tr>`).join("")
+        : `<tr><td colspan="4" style="color:var(--muted)">No data yet.</td></tr>`;
+    }
+
+    function renderDayReport() {
+      const date = $("report-date").value || dayKey(Date.now());
+
+      const map = {};
+      cache.otp.filter(x => logDay(x) === date).forEach(x => {
+        const em = String(x.email || "unknown").toLowerCase();
+        if (!map[em]) map[em] = { count: 0, purposes: new Set(), last: 0 };
+        map[em].count++;
+        if (x.purpose) map[em].purposes.add(x.purpose);
+        map[em].last = Math.max(map[em].last, toMs(x.createdAt));
+      });
+
+      const rows = Object.entries(map).sort((a, b) => b[1].count - a[1].count);
+      $("otp-table").innerHTML = rows.length
+        ? rows.map(([em, v]) => `<tr><td>${escapeHTML(em)}</td><td>${v.count}</td><td>${escapeHTML([...v.purposes].join(", ") || "-")}</td><td>${escapeHTML(v.last ? new Date(v.last).toLocaleTimeString() : "-")}</td></tr>`).join("")
+        : `<tr><td colspan="4" style="color:var(--muted)">No OTP used on this date.</td></tr>`;
+
+      const pw = cache.pw.filter(x => logDay(x) === date).sort((a, b) => toMs(b.createdAt) - toMs(a.createdAt));
+      $("pw-table").innerHTML = pw.length
+        ? pw.map(x => `<tr><td>${escapeHTML(x.email || "unknown")}</td><td>${escapeHTML(x.uniqueId || "-")}</td><td>${escapeHTML(formatDate(x.createdAt))}</td></tr>`).join("")
+        : `<tr><td colspan="3" style="color:var(--muted)">No password changes on this date.</td></tr>`;
+    }
+
+    $("refresh-btn").addEventListener("click", loadStats);
+    $("report-date").addEventListener("change", renderDayReport);
+
+    /* ---------- MEMBER SEARCH (Unique ID or Gmail) ---------- */
+
+    function flatten(obj, prefix, out) {
+      Object.entries(obj).forEach(([k, v]) => {
+        const key = prefix ? prefix + "." + k : k;
+        if (v !== null && typeof v === "object") flatten(v, key, out);
+        else out.push([key, v]);
+      });
+      return out;
+    }
+
+    async function findMember(term) {
+      const t = term.trim();
+      if (!t) return null;
+if (/^[A-Za-z0-9_-]+$/.test(t)) {
+        const direct = await get(ref(db, "users/" + t));
+        if (direct.exists()) return { uid: t, data: direct.val() };
+      }
+      
+      const tries = [];
+      if (t.includes("@")) {
+        const lower = t.toLowerCase();
+        tries.push(["email", lower]);
+        if (lower !== t) tries.push(["email", t]);
+      } else {
+        tries.push(["uniqueId", t]);
+        if (/^\d+$/.test(t)) tries.push(["uniqueId", Number(t)]);
+      }
+
+      for (const [field, val] of tries) {
+        const snap = await get(query(ref(db, "users"), orderByChild(field), equalTo(val)));
+        if (snap.exists()) {
+          const obj = snap.val();
+          const uid = Object.keys(obj)[0];
+          return { uid, data: obj[uid] };
+        }
+      }
+
+      if (!t.includes("@") && /^[A-Za-z0-9_-]+$/.test(t)) {
+        const s = await get(ref(db, "memberIds/" + t));
+        if (s.exists()) {
+          const v = s.val();
+          const uid = typeof v === "string" ? v : (v && v.uid) || null;
+          if (uid && /^[A-Za-z0-9_-]+$/.test(uid)) {
+            const u = await get(ref(db, "users/" + uid));
+            if (u.exists()) return { uid, data: u.val() };
+          }
+        }
+      }
+      return null;
+    }
+
+    async function searchMember() {
+      const term = $("member-search-input").value;
+      if (!term.trim()) { showToast("Enter a Unique Member ID or Gmail.", "error"); return; }
+
+      const btn = $("member-search-btn");
+      btn.disabled = true;
+      try {
+        const found = await findMember(term);
+        if (!found) {
+          $("member-result").style.display = "none";
+          showToast("Member not found.", "error");
+          return;
+        }
+
+        const rows = [["Firebase UID (node key)", found.uid]];
+        if (found.data && typeof found.data === "object") flatten(found.data, "", rows);
+        else rows.push(["value", found.data]);
+
+        $("member-grid").innerHTML = rows.map(([k, v]) => {
+          let shown = String(v);
+          if (/created|time|date|updated/i.test(k) && toMs(v)) shown += "  (" + formatDate(v) + ")";
+          return `<div class="member-field"><small>${escapeHTML(k)}</small><strong>${escapeHTML(shown)}</strong></div>`;
+        }).join("");
+
+        $("member-result").style.display = "block";
+       /* ---- BALANCE EDITOR ---- */
+        const oldBox = $("balance-editor");
+        if (oldBox) oldBox.remove();
+
+        const box = document.createElement("div");
+        box.id = "balance-editor";
+        box.className = "card";
+        box.style.marginTop = "16px";
+        const startBal = Number(found.data && found.data.balance) || 0;
+        box.innerHTML = `
+          <div class="card-title"><h3><i class="fa-solid fa-coins"></i> Edit Balance</h3></div>
+          <p style="color:var(--muted);font-size:12px;margin-bottom:10px;">
+            Current balance: <b id="be-current" style="color:white;">${startBal}</b> Coins
+          </p>
+          <div class="form-group">
+            <label class="form-label">Amount (Coins)</label>
+            <input class="input" id="be-amount" type="number" min="0" step="any" placeholder="Example: 300">
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-danger" id="be-minus"><i class="fa-solid fa-minus"></i> Deduct</button>
+            <button class="btn btn-success" id="be-plus"><i class="fa-solid fa-plus"></i> Add</button>
+            <button class="btn btn-primary" id="be-set"><i class="fa-solid fa-pen"></i> Set exact</button>
+          </div>`;
+        $("member-grid").before(box);
+
+
+        async function changeBalance(mode) {
+          const raw = $("be-amount").value;
+          const amt = Number(raw);
+          if (raw === "" || !Number.isFinite(amt) || amt < 0) {
+            showToast("Enter a valid amount.", "error");
+            return;
+          }
+          try {
+            const snap = await get(ref(db, "users/" + found.uid + "/balance"));
+            const cur = Number(snap.val()) || 0;
+            const next = mode === "plus" ? cur + amt : mode === "minus" ? cur - amt : amt;
+            if (next < 0) { showToast("Balance cannot go below 0.", "error"); return; }
+            if (!confirm("Balance: " + cur + "  →  " + next + "\nConfirm?")) return;
+            await update(ref(db, "users/" + found.uid), { balance: next });
+            $("be-current").textContent = next;
+            $("be-amount").value = "";
+            showToast("Balance updated to " + next + " Coins.", "success");
+          } catch (err) {
+            console.error(err);
+            showToast("Balance update failed: " + err.message, "error");
+          }
+        }
+
+        $("be-minus").onclick = () => changeBalance("minus");
+        $("be-plus").onclick = () => changeBalance("plus");
+        $("be-set").onclick = () => changeBalance("set"); 
+      } catch (error) {
+        console.error(error);
+        showToast("Member search failed: " + error.message, "error");
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    $("member-search-btn").addEventListener("click", searchMember);
+    $("member-search-input").addEventListener("keydown", e => { if (e.key === "Enter") searchMember(); });
+
+    /* ---------- WITHDRAWALS ---------- */
+
+    function listenToWithdrawals() {
+      const q = query(ref(db, "withdrawals"), orderByChild("timestamp"), limitToLast(200));
+      const unsub = onValue(q, snapshot => {
+        withdrawalData = {};
+        let pending = 0;
+        if (snapshot.exists()) {
+          Object.entries(snapshot.val()).forEach(([id, r]) => {
+            if (!r || typeof r !== "object") return;
+            withdrawalData[id] = r;
+            if (String(r.status || "Pending").toLowerCase() === "pending") pending++;
+          });
+        }
+        setBadge(pending);
+        renderWithdrawals();
+      }, error => {
+        console.error(error);
+        showToast("Withdrawal listener error: " + error.message, "error");
+      });
+      unsubs.push(unsub);
+    }
+
+    function renderWithdrawals() {
+      const container = $("withdrawal-list");
+      const entries = Object.entries(withdrawalData).sort(([, a], [, b]) =>
+        toMs(b.timestamp || b.createdAt) - toMs(a.timestamp || a.createdAt));
+
+      if (!entries.length) {
+        container.innerHTML = `<p style="color:var(--muted);font-size:13px;">No withdrawal requests found.</p>`;
+        return;
+      }
+
+      container.innerHTML = entries.map(([id, r]) => {
+        const status = String(r.status || "Pending");
+        const n = status.toLowerCase();
+        const cls = n === "pending" ? "status-pending" : n === "rejected" ? "status-rejected" : "status-completed";
+        return `
+          <div class="request">
+            <div class="request-top">
+              <div class="request-id">ID: ${escapeHTML(r.uid || r.uniqueId || id)}</div>
+              <span class="status ${cls}">${escapeHTML(status)}</span>
+            </div>
+            <div class="request-grid">
+              <div class="request-info">Member<b>${escapeHTML(r.userName || r.name || "N/A")}</b></div>
+              <div class="request-info">Method<b>${escapeHTML(r.method || "N/A")}</b></div>
+              <div class="request-info">Number<b>${escapeHTML(r.number || r.phone_number || "N/A")}</b></div>
+              <div class="request-info">Account<b>${escapeHTML(r.accountType || r.account_type || "Personal")}</b></div>
+              <div class="request-info">Amount<b>${escapeHTML(r.amount || "0")} Coins</b></div>
+              <div class="request-info">Requested<b>${escapeHTML(formatDate(r.timestamp || r.createdAt))}</b></div>
+            </div>
+            ${n === "pending" ? `<div class="request-actions">
+              <button class="btn btn-primary" data-manage="${escapeHTML(id)}"><i class="fa-solid fa-gear"></i> Manage Request</button>
+            </div>` : ""}
+            ${r.rejectionReason ? `<div class="request-info" style="margin-top:10px;">Reason<b>${escapeHTML(r.rejectionReason)}</b></div>` : ""}
+          </div>`;
+      }).join("");
+    }
+
+    $("withdrawal-list").addEventListener("click", e => {
+      const b = e.target.closest("[data-manage]");
+      if (b) openWithdrawalModal(b.dataset.manage);
+    });
+
+    function openWithdrawalModal(requestId) {
+      const r = withdrawalData[requestId];
+      if (!r) { showToast("Request no longer exists.", "error"); return; }
+      selectedRequestId = requestId;
+      $("rejection-reason").value = "";
+
+      const f = (label, val) => `<div class="member-field"><small>${label}</small><strong>${escapeHTML(val)}</strong></div>`;
+      $("modal-request-details").innerHTML = `<div class="member-grid">
+        ${f("Unique ID", r.uid || r.uniqueId || "N/A")}
+        ${f("Name", r.userName || r.name || "N/A")}
+        ${f("Payment Method", r.method || "N/A")}
+        ${f("Account Number", r.number || r.phone_number || "N/A")}
+        ${f("Account Type", r.accountType || r.account_type || "Personal")}
+        ${f("Amount", (r.amount || "0") + " Coins")}
+      </div>`;
+      $("withdraw-modal").classList.add("show");
+    }
+
+    function closeModal() {
+      $("withdraw-modal").classList.remove("show");
+      selectedRequestId = null;
+    }
+    $("close-modal").addEventListener("click", closeModal);
+
+    $("approve-request").addEventListener("click", async () => {
+      if (!selectedRequestId || !withdrawalData[selectedRequestId]) return;
+      if (!confirm("Have you manually completed the payment? Mark this request as Approved?")) return;
+      try {
+        await update(ref(db, "withdrawals/" + selectedRequestId), {
+          status: "Approved", updatedAt: Date.now(), processedBy: currentUser.uid
+        });
+        showToast("Withdrawal marked as Approved.", "success");
+        closeModal();
+      } catch (error) {
+        console.error(error);
+        showToast("Unable to update request: " + error.message, "error");
+      }
+    });
+
+    $("reject-request").addEventListener("click", async () => {
+      if (!selectedRequestId) return;
+      const reason = $("rejection-reason").value.trim();
+      if (!reason) { showToast("Enter a rejection reason.", "error"); return; }
+      try {
+        await update(ref(db, "withdrawals/" + selectedRequestId), {
+          status: "Rejected", rejectionReason: reason, updatedAt: Date.now(), processedBy: currentUser.uid
+        });
+        showToast("Withdrawal request rejected.", "success");
+        closeModal();
+      } catch (error) {
+        console.error(error);
+        showToast("Unable to reject request: " + error.message, "error");
+      }
+    });
+
+    /* ---------- GLOBAL NOTIFICATION ---------- */
+
+    $("publish-notification").addEventListener("click", async () => {
+      const message = $("notification-message").value.trim();
+      const title = $("notification-title").value.trim();
+      if (!message) { showToast("Write a notification first.", "error"); return; }
+
+      const btn = $("publish-notification");
+      btn.disabled = true;
+      try {
+        const now = Date.now();
+        await set(ref(db, "global_announcement"), {
+          id: String(now),
+          title: title,
+          message: message,
+          updated_at: now,
+          publishedBy: currentUser.uid
+        });
+        showToast("Global notification published.", "success");
+        $("notification-message").value = "";
+        $("notification-title").value = "";
+      } catch (error) {
+        console.error(error);
+        showToast("Notification failed: " + error.message, "error");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    /* ---------- GAMES ---------- */
+
+    function nextGameId() {
+      let max = 0;
+      Object.keys(gamesData).forEach(k => {
+        const m = /^game_(\d+)$/.exec(k);
+        if (m) max = Math.max(max, Number(m[1]));
+      });
+      return "game_" + String(max + 1).padStart(3, "0");
+    }
+
+    function listenToGames() {
+      const unsub = onValue(ref(db, "games"), snapshot => {
+        gamesData = snapshot.exists() ? snapshot.val() : {};
+        $("stat-games").textContent = Object.keys(gamesData).length.toLocaleString();
+        if (!$("game-id").value) $("game-id").value = nextGameId();
+        renderGames();
+      }, error => {
+        console.error(error);
+        showToast("Games listener error: " + error.message, "error");
+      });
+      unsubs.push(unsub);
+    }
+
+    function renderGames() {
+      const c = $("games-list");
+      const entries = Object.entries(gamesData).filter(([, g]) => g && typeof g === "object");
+      if (!entries.length) { c.innerHTML = `<p style="color:var(--muted);font-size:13px;">No games yet.</p>`; return; }
+
+      c.innerHTML = entries.map(([id, g]) => `
+        <div class="request">
+          <div class="item-row">
+            <img class="item-img" src="${escapeHTML(g.iconUrl || "")}" alt="" onerror="this.style.visibility='hidden'">
+            <div class="item-body">
+              <b>${escapeHTML(g.title || id)}</b>
+              <small>${escapeHTML(id)} • ${g.isActive === false || g.isActive === "false" ? "Hidden" : "Active"}</small><br>
+              <small>${escapeHTML(g.gameUrl || "")}</small>
+            </div>
+          </div>
+          <div class="request-actions">
+            <button class="btn btn-muted btn-sm" data-act="edit" data-id="${escapeHTML(id)}"><i class="fa-solid fa-pen"></i> Edit</button>
+            <button class="btn btn-warning btn-sm" data-act="toggle" data-id="${escapeHTML(id)}"><i class="fa-solid fa-eye"></i> Show/Hide</button>
+            <button class="btn btn-danger btn-sm" data-act="delete" data-id="${escapeHTML(id)}"><i class="fa-solid fa-trash"></i> Delete</button>
+          </div>
+        </div>`).join("");
+    }
+
+    $("games-list").addEventListener("click", async e => {
+      const b = e.target.closest("[data-act]");
+      if (!b) return;
+      const id = b.dataset.id;
+      const g = gamesData[id];
+      if (!g) return;
+
+      try {
+        if (b.dataset.act === "edit") {
+          $("game-id").value = id;
+          $("game-title").value = g.title || "";
+          $("game-url").value = g.gameUrl || "";
+          $("game-icon").value = g.iconUrl || "";
+          $("game-active").value = (g.isActive === false || g.isActive === "false") ? "false" : "true";
+          showToast("Loaded into the form. Edit and press Upload.");
+          window.scrollTo(0, 0);
+        } else if (b.dataset.act === "toggle") {
+          const now = !(g.isActive === false || g.isActive === "false");
+          await update(ref(db, "games/" + id), { isActive: !now });
+          showToast(!now ? "Game is now active." : "Game is now hidden.", "success");
+        } else if (b.dataset.act === "delete") {
+          if (!confirm("Delete " + (g.title || id) + "?")) return;
+          await remove(ref(db, "games/" + id));
+          showToast("Game deleted.", "success");
+        }
+      } catch (error) {
+        console.error(error);
+        showToast("Action failed: " + error.message, "error");
+      }
+    });
+
+    $("upload-game").addEventListener("click", async () => {
+      const id = $("game-id").value.trim();
+      const title = $("game-title").value.trim();
+      const gameUrl = $("game-url").value.trim();
+      const iconUrl = $("game-icon").value.trim();
+      const isActive = $("game-active").value === "true";
+
+      if (!/^[A-Za-z0-9_-]+$/.test(id)) { showToast("Game ID may contain only letters, numbers, _ and -.", "error"); return; }
+      if (!title) { showToast("Enter the game title.", "error"); return; }
+      if (!/^https?:\/\//i.test(gameUrl)) { showToast("Game URL must start with http:// or https://", "error"); return; }
+      if (iconUrl && !/^https?:\/\//i.test(iconUrl)) { showToast("Icon URL must start with http:// or https://", "error"); return; }
+
+      if (gamesData[id] && !confirm(id + " already exists. Overwrite it?")) return;
+
+      const btn = $("upload-game");
+      btn.disabled = true;
+      try {
+        await set(ref(db, "games/" + id), { id, title, gameUrl, iconUrl, isActive });
+        showToast("Game saved successfully.", "success");
+        $("game-title").value = "";
+        $("game-url").value = "";
+        $("game-icon").value = "";
+        $("game-active").value = "true";
+        $("game-id").value = "";
+        setTimeout(() => { if (!$("game-id").value) $("game-id").value = nextGameId(); }, 400);
+      } catch (error) {
+        console.error(error);
+        showToast("Game upload failed: " + error.message, "error");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    /* ---------- PRODUCTS ---------- */
+
+    function listenToProducts() {
+      const unsub = onValue(ref(db, "products"), snapshot => {
+        productsData = snapshot.exists() ? snapshot.val() : {};
+        $("stat-products").textContent = Object.keys(productsData).length.toLocaleString();
+        renderProducts();
+      }, error => {
+        console.error(error);
+        showToast("Products listener error: " + error.message, "error");
+      });
+      unsubs.push(unsub);
+    }
+
+    function renderProducts() {
+      const c = $("products-list");
+      const entries = Object.entries(productsData).filter(([, p]) => p && typeof p === "object")
+        .sort(([, a], [, b]) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+      if (!entries.length) { c.innerHTML = `<p style="color:var(--muted);font-size:13px;">No products yet.</p>`; return; }
+
+      c.innerHTML = entries.map(([id, p]) => `
+        <div class="request">
+          <div class="item-row">
+            <img class="item-img" src="${escapeHTML(p.imageUrl || "")}" alt="" onerror="this.style.visibility='hidden'">
+            <div class="item-body">
+              <b>${escapeHTML(p.title || id)}</b>
+              <small>Price: ${escapeHTML(p.price ?? 0)} • Stock: ${escapeHTML(p.stock ?? 0)} • Coins: ${escapeHTML(p.coinPrice ?? 0)} • ${p.isActive === false ? "Hidden" : "Active"}</small>
+            </div>
+          </div>
+          <div class="request-actions">
+            <button class="btn btn-muted btn-sm" data-pact="stock" data-id="${escapeHTML(id)}"><i class="fa-solid fa-boxes-stacked"></i> Stock</button>
+            <button class="btn btn-warning btn-sm" data-pact="toggle" data-id="${escapeHTML(id)}"><i class="fa-solid fa-eye"></i> Show/Hide</button>
+            <button class="btn btn-danger btn-sm" data-pact="delete" data-id="${escapeHTML(id)}"><i class="fa-solid fa-trash"></i> Delete</button>
+          </div>
+        </div>`).join("");
+    }
+
+    $("products-list").addEventListener("click", async e => {
+      const b = e.target.closest("[data-pact]");
+      if (!b) return;
+      const id = b.dataset.id;
+      const p = productsData[id];
+      if (!p) return;
+
+      try {
+        if (b.dataset.pact === "stock") {
+          const v = prompt("New stock amount:", String(p.stock ?? 0));
+          if (v === null) return;
+          const n = Number(v);
+          if (!Number.isFinite(n) || n < 0) { showToast("Enter a valid number.", "error"); return; }
+          await update(ref(db, "products/" + id), { stock: n });
+          showToast("Stock updated.", "success");
+        } else if (b.dataset.pact === "toggle") {
+          await update(ref(db, "products/" + id), { isActive: p.isActive === false });
+          showToast("Product visibility changed.", "success");
+        } else if (b.dataset.pact === "delete") {
+          if (!confirm("Delete " + (p.title || id) + "?")) return;
+          await remove(ref(db, "products/" + id));
+          showToast("Product deleted.", "success");
+        }
+      } catch (error) {
+        console.error(error);
+        showToast("Action failed: " + error.message, "error");
+      }
+    });
+
+    $("upload-product").addEventListener("click", async () => {
+      const title = $("product-title").value.trim();
+      const imageUrl = $("product-image").value.trim();
+      const price = Number($("product-price").value);
+      const stock = Number($("product-stock").value);
+      const coinPrice = Number($("product-coins").value);
+      const description = $("product-description").value.trim();
+
+      if (!title) { showToast("Enter the product name.", "error"); return; }
+      if (!/^https?:\/\//i.test(imageUrl)) { showToast("Image URL must start with http:// or https://", "error"); return; }
+      if (!Number.isFinite(price) || price < 0 || $("product-price").value === "") { showToast("Enter a valid price.", "error"); return; }
+      if (!Number.isFinite(stock) || stock < 0 || $("product-stock").value === "") { showToast("Enter a valid stock.", "error"); return; }
+      if (!Number.isFinite(coinPrice) || coinPrice < 0 || $("product-coins").value === "") { showToast("Enter the coins required.", "error"); return; }
+
+      const btn = $("upload-product");
+      btn.disabled = true;
+      try {
+        const id = "product_" + Date.now();
+        await set(ref(db, "products/" + id), {
+          id, title, imageUrl, price, stock, coinPrice, description,
+          isActive: true, createdAt: Date.now(), createdBy: currentUser.uid
+        });
+        showToast("Product uploaded.", "success");
+        ["product-title", "product-image", "product-price", "product-stock", "product-coins", "product-description"]
+          .forEach(i => { $(i).value = ""; });
+      } catch (error) {
+        console.error(error);
+        showToast("Product upload failed: " + error.message, "error");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    /* ---------- CONTENT ---------- */
+
+    $("publish-content").addEventListener("click", async () => {
+      const title = $("content-title").value.trim();
+      const description = $("content-description").value.trim();
+      const type = $("content-type").value;
+      const url = $("content-url").value.trim();
+      if (!title) { showToast("Enter content title.", "error"); return; }
+
+      const btn = $("publish-content");
+      btn.disabled = true;
+      try {
+        const id = "content_" + Date.now();
+        await set(ref(db, "content/" + id), {
+          id, title, description, type, mediaURL: url,
+          published: true, createdAt: Date.now(), createdBy: currentUser.uid
+        });
+        showToast("Content published.", "success");
+        $("content-title").value = "";
+        $("content-description").value = "";
+        $("content-url").value = "";
+      } catch (error) {
+        console.error(error);
+        showToast("Content publishing failed: " + error.message, "error");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    /* ---------- ORDERS ---------- */
+
+let orderData = {};
+let selectedOrderId = null;
+
+function setOrderBadge(n) {
+  const t = n > 99 ? "99+" : String(n);
+  $("side-order-count").textContent = t;
+  $("bottom-order-count").textContent = t;
+}
+
+function listenToOrders() {
+  const q = query(ref(db, "orders"), orderByChild("timestamp"), limitToLast(200));
+  const unsub = onValue(q, snapshot => {
+    orderData = {};
+    let pending = 0;
+    if (snapshot.exists()) {
+      Object.entries(snapshot.val()).forEach(([id, o]) => {
+        if (!o || typeof o !== "object") return;
+        orderData[id] = o;
+        if (String(o.status || "pending").toLowerCase() === "pending") pending++;
+      });
+    }
+    setOrderBadge(pending);
+    renderOrders();
+  }, error => {
+    console.error(error);
+    showToast("Orders listener error: " + error.message, "error");
+  });
+  unsubs.push(unsub);
+}
+
+function renderOrders() {
+  const c = $("orders-list");
+  const entries = Object.entries(orderData).sort(([, a], [, b]) => toMs(b.timestamp) - toMs(a.timestamp));
+  if (!entries.length) {
+    c.innerHTML = `<p style="color:var(--muted);font-size:13px;">No orders yet.</p>`;
+    return;
+  }
+
+  c.innerHTML = entries.map(([id, o]) => {
+    const status = String(o.status || "pending");
+    const n = status.toLowerCase();
+    const cls = n === "pending" ? "status-pending" : n === "rejected" ? "status-rejected" : "status-completed";
+    const address = [o.village, o.upazila, o.district, o.division].filter(Boolean).join(", ") || "N/A";
+    const open = n !== "delivered" && n !== "rejected";
+    return `
+      <div class="request">
+        <div class="request-top">
+          <div class="request-id">${escapeHTML(o.productTitle || "Product")}</div>
+          <span class="status ${cls}">${escapeHTML(status.toUpperCase())}</span>
+        </div>
+        <div class="request-grid">
+          <div class="request-info">Member<b>${escapeHTML(o.userName || "N/A")}</b></div>
+          <div class="request-info">Member ID<b>${escapeHTML(o.userId || "N/A")}</b></div>
+          <div class="request-info">Coins Deducted<b>${escapeHTML(o.coinsDeducted ?? 0)}</b></div>
+          <div class="request-info">Price<b>${escapeHTML(o.price ?? 0)}</b></div>
+          <div class="request-info">Phone<b>${escapeHTML(o.primaryPhone || "N/A")}</b></div>
+          <div class="request-info">Recovery Phone<b>${escapeHTML(o.recoveryPhone || "N/A")}</b></div>
+          <div class="request-info" style="grid-column:1/-1;">Address<b>${escapeHTML(address)}</b></div>
+          <div class="request-info" style="grid-column:1/-1;">Ordered<b>${escapeHTML(formatDate(o.timestamp))}</b></div>
+        </div>
+        ${o.rejectionReason ? `<div class="request-info" style="margin-top:10px;">Reason<b>${escapeHTML(o.rejectionReason)}</b></div>` : ""}
+        ${open ? `<div class="request-actions">
+          <button class="btn btn-primary" data-omanage="${escapeHTML(id)}"><i class="fa-solid fa-gear"></i> Manage Order</button>
+        </div>` : ""}
+      </div>`;
+  }).join("");
+}
+
+$("orders-list").addEventListener("click", e => {
+  const b = e.target.closest("[data-omanage]");
+  if (!b) return;
+  const id = b.dataset.omanage;
+  const o = orderData[id];
+  if (!o) { showToast("Order no longer exists.", "error"); return; }
+  selectedOrderId = id;
+  $("order-reject-reason").value = "";
+  const f = (l, v) => `<div class="member-field"><small>${l}</small><strong>${escapeHTML(v)}</strong></div>`;
+  $("order-modal-details").innerHTML = `<div class="member-grid">
+    ${f("Product", o.productTitle || "N/A")}
+    ${f("Member", (o.userName || "N/A") + " (" + (o.userId || "-") + ")")}
+    ${f("Coins Deducted", o.coinsDeducted ?? 0)}
+    ${f("Current Status", o.status || "pending")}
+    ${f("Phone", o.primaryPhone || "N/A")}
+    ${f("Recovery Phone", o.recoveryPhone || "N/A")}
+  </div>`;
+  $("order-modal").classList.add("show");
+});
+
+function closeOrderModal() {
+  $("order-modal").classList.remove("show");
+  selectedOrderId = null;
+}
+$("close-order-modal").addEventListener("click", closeOrderModal);
+
+async function setOrderStatus(status) {
+  if (!selectedOrderId) return;
+  const o = orderData[selectedOrderId];
+  if (!o) return;
+
+  const patch = { status, updatedAt: Date.now(), processedBy: currentUser.uid };
+
+  try {
+    if (status === "rejected") {
+      const reason = $("order-reject-reason").value.trim();
+      if (!reason) { showToast("Enter a rejection reason.", "error"); return; }
+      patch.rejectionReason = reason;
+
+      const coins = Number(o.coinsDeducted) || 0;
+      if (coins > 0 && !o.refunded) {
+        if (confirm("Refund " + coins + " Coins back to " + (o.userName || o.userId) + "?")) {
+          const m = await findMember(String(o.userId));
+          if (m) {
+            const bs = await get(ref(db, "users/" + m.uid + "/balance"));
+            const cur = Number(bs.val()) || 0;
+            await update(ref(db, "users/" + m.uid), { balance: cur + coins });
+            patch.refunded = true;
+          } else {
+            showToast("Member not found. Refund skipped.", "error");
+          }
+        }
+      }
+    } else {
+      if (!confirm("Mark this order as " + status.toUpperCase() + "?")) return;
+    }
+
+    await update(ref(db, "orders/" + selectedOrderId), patch);
+    showToast("Order marked as " + status + ".", "success");
+    closeOrderModal();
+  } catch (error) {
+    console.error(error);
+    showToast("Order update failed: " + error.message, "error");
+  }
+}
+
+document.querySelectorAll("[data-ostatus]").forEach(b => {
+  b.addEventListener("click", () => setOrderStatus(b.dataset.ostatus));
+});
+    
+    /* ---------- LOGOUT ---------- */
+
+    async function adminLogout() {
+      try {
+        await signOut(auth);
+      } catch (error) {
+        console.error(error);
+        showToast("Logout failed.", "error");
+      }
+    }
+    $("desktop-logout").addEventListener("click", adminLogout);
+    $("mobile-logout").addEventListener("click", adminLogout);
+  </script>
+</body>
+</html>
