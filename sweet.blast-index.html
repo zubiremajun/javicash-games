@@ -837,7 +837,7 @@ function loadFirebaseModules(){
 }
 const requestedUid=(new URLSearchParams(location.search).get("uid")||"").trim();
 const PENDING_KEY="sweet_blast_pending_reward_v1";
-const MAX_COINS_PER_FLUSH=300,FLUSH_TIMEOUT_MS=7000;
+const MAX_COINS_PER_FLUSH=300,FLUSH_TIMEOUT_MS=12000;
 let ramRewardCoins=0,carryCoins=0;
 
 function readPendingCoins(){
