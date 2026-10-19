@@ -875,8 +875,10 @@ function withTimeout(promise,ms){
   });
 }
 async function saveCoinsToFirebase(member,amount){
-  const[appModule,dbModule]=await loadFirebaseModules();
-  const app=appModule.getApps().length?appModule.getApp():appModule.initializeApp(firebaseConfig);
+  const[appModule,dbModule,authModule]=await loadFirebaseModules();
+  const app=appModule.getApps().length?appModule.getApp():appModule.initializeApp(firebaseConfig);    const auth=authModule.getAuth(app);
+  await new Promise(res=>{const un=authModule.onAuthStateChanged(auth,()=>{un();res()})});
+  if(!auth.currentUser)throw new Error("not-signed-in");
   const database=dbModule.getDatabase(app);
   try{
     dbModule.goOnline(database);
