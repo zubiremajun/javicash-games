@@ -2700,7 +2700,14 @@ setTimeout(
    here - it is opened only when the player leaves (Back button).
 */
 loadFirebaseModules().catch(() => {});
+function retryPendingSave() {
+    if (totalUncredited() > 0 && navigator.onLine && getMember()) {
+        flushRewards().catch(() => {});
+    }
+}
 
+window.addEventListener("online", retryPendingSave);
+setTimeout(retryPendingSave, 4000);
 
 /*
    Developer ad: every 20 seconds a small bar slides in from the top,
