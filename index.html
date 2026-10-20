@@ -645,7 +645,6 @@ async function saveCoinsToFirebase(member, amount) {
     });
 
     if (!auth.currentUser) throw new Error("not-signed-in");
-    if (auth.currentUser.uid !== member.uid) throw new Error("uid-mismatch");
 
     const database = dbModule.getDatabase(app);
 
@@ -678,7 +677,14 @@ async function saveCoinsToFirebase(member, amount) {
         ) {
             throw new Error("member-email-mismatch");
         }
+        /* 2b) the signed-in Firebase user must own this member ID */
 
+        if (
+            !data.authUid ||
+            data.authUid !== auth.currentUser.uid
+        ) {
+            throw new Error("auth-owner-mismatch");
+        }
         /* 3) add the coins (atomic, server side) */
 
         await dbModule.update(
