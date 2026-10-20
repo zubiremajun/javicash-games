@@ -517,40 +517,32 @@ function updateCoinDisplay() {
 }
 
 
+function pendingKey() {
+    const m = getMember();
+    return m ? PENDING_STORAGE_KEY + "_" + m.uid : null;
+}
+
 function readPendingCoins() {
-
     try {
-
-        const value =
-            Number(
-                localStorage.getItem(PENDING_STORAGE_KEY) || 0
-            );
-
-        if (!Number.isFinite(value) || value <= 0) {
-            return 0;
-        }
-
+        const key = pendingKey();
+        if (!key) return 0;
+        const value = Number(localStorage.getItem(key) || 0);
+        if (!Number.isFinite(value) || value <= 0) return 0;
         return Math.floor(value);
-
     } catch {
         return 0;
     }
 }
 
-
 function savePendingCoins(total) {
-
     try {
-
+        const key = pendingKey();
+        if (!key) return;
         if (total > 0) {
-            localStorage.setItem(
-                PENDING_STORAGE_KEY,
-                String(Math.floor(total))
-            );
+            localStorage.setItem(key, String(Math.floor(total)));
         } else {
-            localStorage.removeItem(PENDING_STORAGE_KEY);
+            localStorage.removeItem(key);
         }
-
     } catch {}
 }
 
