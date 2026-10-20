@@ -758,19 +758,19 @@ async function doFlush() {
         };
     }
 
-    /* Saved. Local memory goes back to zero. */
+/* Saved OK: only the saved amount is removed */
 
-    const leftover = total - credit;
+const remaining = Math.max(0, totalUncredited() - credit);
 
-    ramRewardCoins = 0;
-    carryCoins = leftover;
+ramRewardCoins = 0;
+carryCoins = remaining;
 
-    savePendingCoins(leftover);
+savePendingCoins(remaining);
 
-    updateCoinDisplay();
+updateCoinDisplay();
 
-    totalCoinsText.textContent = ramRewardCoins;
-
+totalCoinsText.textContent = ramRewardCoins;
+    
     return { ok: true, credited: credit };
 }
 
