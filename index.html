@@ -382,7 +382,8 @@ function loadFirebaseModules() {
 
         firebaseModulesPromise = Promise.all([
             import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`),
-            import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-database.js`)
+            import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-database.js`),
+           import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth.js`)
         ]).catch(error => {
             firebaseModulesPromise = null;
             throw error;
