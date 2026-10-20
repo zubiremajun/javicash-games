@@ -645,6 +645,7 @@ async function saveCoinsToFirebase(member, amount) {
     });
 
     if (!auth.currentUser) throw new Error("not-signed-in");
+    if (auth.currentUser.uid !== member.uid) throw new Error("uid-mismatch");
 
     const database = dbModule.getDatabase(app);
 
