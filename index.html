@@ -640,12 +640,19 @@ function debugSync(message, error) {
 
 async function saveCoinsToFirebase(member, amount) {
 
-    const [appModule, dbModule] = await loadFirebaseModules();
+  const [appModule, dbModule, authModule] = await loadFirebaseModules();
 
     const app =
         appModule.getApps().length
             ? appModule.getApp()
             : appModule.initializeApp(firebaseConfig);
+        const auth = authModule.getAuth(app);
+
+    await new Promise(res => {
+        const un = authModule.onAuthStateChanged(auth, () => { un(); res(); });
+    });
+
+    if (!auth.currentUser) throw new Error("not-signed-in");
 
     const database = dbModule.getDatabase(app);
 
