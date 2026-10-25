@@ -513,7 +513,8 @@ let carryCoins = 0;       /* coins of an earlier visit that could not be saved *
 
 
 function updateCoinDisplay() {
-    coinsValue.textContent = String(ramRewardCoins);
+        coinsValue.textContent = String(totalUncredited());
+
 }
 
 
