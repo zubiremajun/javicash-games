@@ -776,7 +776,7 @@ savePendingCoins(remaining);
 
 updateCoinDisplay();
 
-totalCoinsText.textContent = ramRewardCoins;
+totalCoinsText.textContent = totalUncredited();
     
     return { ok: true, credited: credit };
 }
