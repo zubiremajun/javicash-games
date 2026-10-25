@@ -161,7 +161,7 @@ function writePending(t){
 carryCoins=readPending();
 const totalUncredited=()=>carryCoins+ramCoins;
 const persist=()=>writePending(totalUncredited());
-function updateCoins(){coinsEl.textContent=ramCoins;$("coinTxt").textContent=ramCoins;}
+function updateCoins(){coinsEl.textContent=totalUncredited();$("coinTxt").textContent=totalUncredited();}
 
 /* who is playing (login saved by the JAVICASH dashboard) */
 function getMember(){
