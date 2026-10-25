@@ -129,7 +129,8 @@ function loadFirebase(){
   if(!fbPromise){
     fbPromise=Promise.all([
       import(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-app.js`),
-      import(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-database.js`)
+      import(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-database.js`),
+      import(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-auth.js`)
     ]).catch(e=>{fbPromise=null;throw e;});
   }
   return fbPromise;
