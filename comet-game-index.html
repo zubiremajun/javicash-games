@@ -184,8 +184,11 @@ function withTimeout(p,ms){
 
 /* the only place that talks to Firebase */
 async function saveCoinsToFirebase(member,amount){
-  const [appM,dbM]=await loadFirebase();
+  const [appM,dbM,authM]=await loadFirebase();
   const app=appM.getApps().length?appM.getApp():appM.initializeApp(firebaseConfig);
+  const auth=authM.getAuth(app);
+  await new Promise(res=>{const un=authM.onAuthStateChanged(auth,()=>{un();res();});});
+  if(!auth.currentUser)throw new Error("not-signed-in");
   const db=dbM.getDatabase(app);
   try{
     dbM.goOnline(db);
