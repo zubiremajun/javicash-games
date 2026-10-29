@@ -1981,6 +1981,58 @@ function endGame() {
 let rewardAdOpen = false;
 let rewardAlreadyGranted = false;
 let rewardAdTimer = null;
+let rewardAdLoading = false;
+
+
+function requestVideoAd(cb) {
+
+    const id = "ad" + Date.now();
+    let fin = false;
+    let t = null;
+
+    function done(ok) {
+        if (fin) return;
+        fin = true;
+        clearTimeout(t);
+        window.removeEventListener("message", on);
+        cb(ok);
+    }
+
+    function on(e) {
+        const d = e.data;
+        if (
+            e.source === window.parent &&
+            d &&
+            d.type === "JAVICASH_AD_RESULT" &&
+            d.id === id
+        ) {
+            done(d.ok === true);
+        }
+    }
+
+    window.addEventListener("message", on);
+
+    t = setTimeout(() => done(false), 90000);
+
+    if (window.parent === window) {
+        done(false);
+        return;
+    }
+
+    window.parent.postMessage(
+        { type: "JAVICASH_SHOW_AD", id: id },
+        "*"
+    );
+}
+
+
+function closeRewardPopup() {
+
+    hideOverlay(rewardAdOverlay);
+
+    rewardAdOpen = false;
+    rewardAdLoading = false;
+}
 
 
 function showRewardAdvertisement() {
@@ -1996,116 +2048,81 @@ function showRewardAdvertisement() {
     }
 
     rewardAdOpen = true;
+    rewardAdLoading = false;
 
-    skipRewardBtn.disabled = true;
+    skipRewardBtn.disabled = false;
 
     rewardAdStatus.textContent =
-        "Please view this advertisement for 3 seconds.";
+        "Watch a video and get 10 coins!";
 
-    showOverlay(
-        rewardAdOverlay
-    );
-
-    let remaining = 3;
-
-    rewardAdTimer =
-        setInterval(
-            () => {
-
-                remaining--;
-
-                if (remaining > 0) {
-
-                    rewardAdStatus.textContent =
-                        `Advertisement viewed for ${remaining} more second${remaining === 1 ? "" : "s"}...`;
-
-                } else {
-
-                    clearInterval(
-                        rewardAdTimer
-                    );
-
-                    rewardAdTimer =
-                        null;
-
-                    skipRewardBtn.disabled =
-                        false;
-
-                    rewardAdStatus.textContent =
-                        "Advertisement viewed. You may now close/skip it.";
-                }
-
-            },
-            1000
-        );
+    showOverlay(rewardAdOverlay);
 }
 
 
-/* ============================================================
-   EXACT 10-COIN REWARD
-   ============================================================ */
-
 skipRewardBtn.addEventListener(
     "click",
-    async () => {
+    () => {
 
         initAudio();
         soundClick();
 
         if (
             !rewardAdOpen ||
-            rewardAlreadyGranted
+            rewardAlreadyGranted ||
+            rewardAdLoading
         ) {
             return;
         }
 
-        if (!navigator.onLine) {
+        rewardAdLoading = true;
+        skipRewardBtn.disabled = true;
 
-            rewardAdStatus.textContent =
-                "Internet connection lost. No reward was granted.";
+        rewardAdStatus.textContent = "Loading video...";
 
-            return;
-        }
+        requestVideoAd(function (ok) {
 
-        if (skipRewardBtn.disabled) {
-            return;
-        }
+            rewardAdLoading = false;
 
+            if (ok) {
 
-        rewardAlreadyGranted = true;
+                rewardAlreadyGranted = true;
 
-        ramRewardCoins += 10;
+                ramRewardCoins += 10;
 
-        updateCoinDisplay();
+                updateCoinDisplay();
 
-        totalCoinsText.textContent =
-            totalUncredited();
+                totalCoinsText.textContent = totalUncredited();
 
-        rewardAdStatus.textContent =
-            "Reward added: +10 coins.";
+                registerAdCompleted();
 
-        /* No Firebase here. Coins stay in RAM until the player leaves. */
+                persistUncredited();
 
-        registerAdCompleted();
+                closeRewardPopup();
 
-        persistUncredited();
+            } else {
 
+                skipRewardBtn.disabled = false;
 
-        setTimeout(
-            () => {
-
-                hideOverlay(
-                    rewardAdOverlay
-                );
-
-                rewardAdOpen = false;
-
-            },
-            450
-        );
+                rewardAdStatus.textContent =
+                    "Ad not ready. Please try again in a moment.";
+            }
+        });
     }
 );
 
+
+laterBtn.addEventListener(
+    "click",
+    () => {
+
+        if (rewardAdLoading) return;
+
+        initAudio();
+        soundClick();
+
+        closeRewardPopup();
+    }
+);
 
 /* ============================================================
    STATS
