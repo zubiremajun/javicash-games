@@ -103,11 +103,11 @@ input[type=range]{width:100%;accent-color:var(--cy)}
 
 <!-- Reward text ad -->
 <div class="overlay" id="rwOv"><div class="modal">
-  <div class="adl">Advertisement</div><h2>📢 Text Advertisement</h2>
-  <div class="rad"><strong>Comet Survival Special</strong>
-    <p>Keep playing Comet Survival and dodge the comets. This is a text-only advertisement.</p></div>
-  <p id="rwStatus" style="font-size:12px;margin-top:12px">Please view this advertisement for 3 seconds.</p>
-  <div class="acts"><button class="sb" id="skipBtn" disabled>Skip Ad</button></div>
+  <div class="adl">Reward</div><h2>🎁 Free 10 Coins!</h2>
+  <div class="rad"><strong>Watch a short video</strong>
+    <p>Tap the button to watch a video ad and get 10 coins.</p></div>
+  <p id="rwStatus" style="font-size:12px;margin-top:12px">Watch a video and get 10 coins!</p>
+  <div class="acts"><button class="sb" id="laterBtn">Not Now</button><button class="pb" id="skipBtn">▶ Watch Ad</button></div>
 </div></div>
 
 <script type="module">
@@ -145,7 +145,7 @@ const $=id=>document.getElementById(id);
 const canvas=$("gameCanvas"), ctx=canvas.getContext("2d");
 const scoreEl=$("score"), coinsEl=$("coins"), adBanner=$("adBanner");
 const goOv=$("goOv"), setOv=$("setOv"), cdOv=$("cdOv"), rwOv=$("rwOv");
-const skipBtn=$("skipBtn"), rwStatus=$("rwStatus");
+const skipBtn=$("skipBtn"), rwStatus=$("rwStatus"), laterBtn=$("laterBtn");
 const show=e=>e.classList.add("active"), hide=e=>e.classList.remove("active");
 
 /* ================= COIN WALLET (RAM + safety copy) ================= */
