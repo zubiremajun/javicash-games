@@ -2049,7 +2049,7 @@ function showRewardAdvertisement() {
 
     rewardAdOpen = true;
     rewardAdLoading = false;
-
+    registerAdCompleted();
     skipRewardBtn.disabled = false;
 
     rewardAdStatus.textContent =
@@ -2092,8 +2092,6 @@ skipRewardBtn.addEventListener(
                 updateCoinDisplay();
 
                 totalCoinsText.textContent = totalUncredited();
-
-                registerAdCompleted();
 
                 persistUncredited();
 
