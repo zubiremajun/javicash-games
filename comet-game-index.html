@@ -423,34 +423,53 @@ function endGame(){
 }
 
 /* ================= TEXT AD + EXACT 10-COIN REWARD ================= */
-let rewardOpen=false,rewardGranted=false,rewardTimer=null;
+let rewardOpen=false,rewardGranted=false,rewardTimer=null,rewardLoading=false;
+
+function requestVideoAd(cb){
+  const id="ad"+Date.now();let fin=false,t=null;
+  function done(ok){if(fin)return;fin=true;clearTimeout(t);window.removeEventListener("message",on);cb(ok);}
+  function on(e){const d=e.data;if(e.source===window.parent&&d&&d.type==="JAVICASH_AD_RESULT"&&d.id===id)done(d.ok===true);}
+  window.addEventListener("message",on);
+  t=setTimeout(()=>done(false),90000);
+  if(window.parent===window){done(false);return;}
+  window.parent.postMessage({type:"JAVICASH_SHOW_AD",id:id},"*");
+}
+
+function closeReward(){hide(rwOv);rewardOpen=false;rewardLoading=false;}
 
 function showRewardAd(){
   if(!navigator.onLine||running||rewardOpen||rewardGranted||!adAllowed())return;
-  rewardOpen=true;skipBtn.disabled=true;
-  rwStatus.textContent="Please view this advertisement for 3 seconds.";
+  rewardOpen=true;rewardLoading=false;
+  adDone();
+  skipBtn.disabled=false;
+  rwStatus.textContent="Watch a video and get 10 coins!";
   show(rwOv);
-  let rem=3;
-  rewardTimer=setInterval(()=>{
-    rem--;
-    if(rem>0){rwStatus.textContent=`Advertisement viewed for ${rem} more second${rem===1?"":"s"}...`;}
-    else{
-      clearInterval(rewardTimer);rewardTimer=null;skipBtn.disabled=false;
-      rwStatus.textContent="Advertisement viewed. You may now close/skip it.";
-    }
-  },1000);
 }
 
 skipBtn.addEventListener("click",()=>{
   initAudio();sClick();
-  if(!rewardOpen||rewardGranted||skipBtn.disabled)return;
-  if(!navigator.onLine){rwStatus.textContent="Internet connection lost. No reward was granted.";return;}
-  rewardGranted=true;
-  ramCoins+=10;                 // RAM only - no Firebase during play
-  updateCoins();sCoin();
-  rwStatus.textContent="Reward added: +10 coins.";
-  adDone();persist();
-  setTimeout(()=>{hide(rwOv);rewardOpen=false;},450);
+  if(!rewardOpen||rewardGranted||rewardLoading)return;
+  rewardLoading=true;skipBtn.disabled=true;
+  rwStatus.textContent="Loading video...";
+  requestVideoAd(function(ok){
+    rewardLoading=false;
+    if(ok){
+      rewardGranted=true;
+      ramCoins+=10;
+      updateCoins();sCoin();
+      persist();
+      closeReward();
+    }else{
+      skipBtn.disabled=false;
+      rwStatus.textContent="Ad not ready. Please try again in a moment.";
+    }
+  });
+});
+
+laterBtn.addEventListener("click",()=>{
+  if(rewardLoading)return;
+  initAudio();sClick();
+  closeReward();
 });
 
 /* play again with 5s interstitial */
